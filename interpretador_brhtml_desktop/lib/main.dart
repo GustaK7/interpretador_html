@@ -1,312 +1,215 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
 
 void main() {
-  runApp(const InterpretadorBrApp());
+  runApp(const InterpretadorApp());
 }
 
-class InterpretadorBrApp extends StatelessWidget {
-  const InterpretadorBrApp({super.key});
+class InterpretadorApp extends StatelessWidget {
+  const InterpretadorApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'INTERPRETADOR BRHTML',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF165924),
-          primary: const Color(0xFF165924),
-        ),
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      home: const InterpretadorBrHomePage(),
+      title: 'Interpretador BR',
+      theme: ThemeData.dark(),
+      home: const InterpretadorHome(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class InterpretadorBrHomePage extends StatefulWidget {
-  const InterpretadorBrHomePage({super.key});
+class InterpretadorHome extends StatefulWidget {
+  const InterpretadorHome({super.key});
 
   @override
-  State<InterpretadorBrHomePage> createState() => _InterpretadorBrHomePageState();
+  State<InterpretadorHome> createState() => _InterpretadorHomeState();
 }
 
-class _InterpretadorBrHomePageState extends State<InterpretadorBrHomePage> {
-  final TextEditingController _controller = TextEditingController(
-    text: "<corpo>\n  <titulo>Olá, mundo</titulo>\n  <paragrafo>Vamos começar?</paragrafo>\n</corpo>"
-  );
-  String _saida = "";
-  bool _mostraHTML = false;
+class _InterpretadorHomeState extends State<InterpretadorHome> {
+  final TextEditingController _controller = TextEditingController();
+  final List<String> _saida = [];
+  final InterpretadorBR _interpretador = InterpretadorBR();
 
-  String interpretarBrHTML(String codigo) {
-    Map<String, String> tags = {
-      "titulo": "h1",
-      "subtitulo": "h2",
-      "secao": "h3",
-      "paragrafo": "p",
-      "link": "a",
-      "imagem": "img",
-      "lista1": "ul",
-      "lista2": "ol",
-      "item": "li",
-      "tabela": "table",
-      "linha": "tr",
-      "celula": "td",
-      "cabecalhotab": "th",
-      "formulario": "form",
-      "campo": "input",
-      "botao": "button",
-      "legenda": "label",
-      "bloco": "div",
-      "texto": "span",
-      "negrito": "strong",
-      "italico": "em",
-      "quebra": "br",
-      "separador": "hr",
-      "incorporado": "iframe",
-      "codigo": "script",
-      "recurso": "link",
-      "informacao": "meta",
-      "cabeca": "head",
-      "corpo": "body",
-      "tituloPagina": "title",
-      "navegacao": "nav",
-      "secaoBloco": "section",
-      "artigo": "article",
-      "barraLateral": "aside",
-      "rodape": "footer",
-      "cabecalho": "header",
-      "principal": "main",
-      "figura": "figure",
-      "legendaFigura": "figcaption",
-      "telaGrafica": "canvas",
-      "audio": "audio",
-      "video": "video",
-      "fonteMidia": "source",
-      "faixaLegenda": "track",
-      "semScript": "noscript",
-      "estilo": "style",
-      "molde": "template",
-      "listaDados": "datalist",
-      "grupoOpcoes": "optgroup",
-      "opcao": "option",
-      "seletor": "select",
-      "areaTexto": "textarea",
-      "grupoCampos": "fieldset",
-      "legendaGrupo": "legend",
-      "progresso": "progress",
-      "medidor": "meter",
-      "saida": "output",
-      "detalhes": "details",
-      "resumo": "summary",
-      "marcado": "mark",
-      "abreviacao": "abbr",
-      "codigoInline": "code",
-      "preFormatado": "pre",
-      "teclado": "kbd",
-      "exemploSaida": "samp",
-      "variavel": "var",
-      "removido": "del",
-      "inserido": "ins",
-      "citacao": "cite",
-      "citacaoCurta": "q",
-      "negritoVisual": "b",
-      "italicoVisual": "i",
-      "sublinhado": "u",
-      "pequeno": "small",
-      "subscrito": "sub",
-      "sobrescrito": "sup",
-      "isolamentoBiDi": "bdi",
-      "direcaoTexto": "bdo",
-      "quebraPossivel": "wbr",
-      "incorporar": "embed",
-      "objeto": "object",
-      "parametro": "param"
-    };
-
-    // Primeiro, lidar com tags com atributos
-    // Exemplo: <link href="..."> ou <imagem src="...">
-    final regexAberturaComAtributos = RegExp(r'<(\w+)(\s+[^>]+)>');
-    codigo = codigo.replaceAllMapped(regexAberturaComAtributos, (match) {
-      final tagBr = match.group(1)!;
-      final atributos = match.group(2)!;
-      
-      if (tags.containsKey(tagBr)) {
-        return '<${tags[tagBr]}$atributos>';
-      } else {
-        return match.group(0)!; // Mantém como está se não encontrar
+  void _executarComando() {
+    final texto = _controller.text;
+    if (texto.trim().isEmpty) return;
+    setState(() {
+      for (final linha in texto.split('\n')) {
+        if (linha.trim().isEmpty) continue;
+        final resultado = _interpretador.interpretarLinha(linha);
+        _saida.add("> $linha");
+        _saida.add(resultado);
       }
     });
-
-    // Depois, substituir tags simples (sem atributos)
-    tags.forEach((br, html) {
-      codigo = codigo.replaceAll('<$br>', '<$html>');
-      codigo = codigo.replaceAll('</$br>', '</$html>');
-    });
-
-    return codigo;
+    _controller.clear();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    // Inicializa a saída com o texto predefinido para mostrar um exemplo
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        _saida = interpretarBrHTML(_controller.text);
-      });
+  void _limparSaida() {
+    setState(() {
+      _saida.clear();
     });
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void _mostrarAjuda() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ajuda - Exemplos de comandos BRDart'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('diga Olá Mundo!'),
+              SizedBox(height: 8),
+              Text('soma 2 3'),
+              SizedBox(height: 8),
+              Text('define nome = João'),
+              SizedBox(height: 8),
+              Text('mostre nome'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'INTERPRETADOR BRHTML',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color(0xFF165924),
-        elevation: 0,
-      ),
-      body: Column(
+      appBar: AppBar(title: const Text('Interpretador BRDart')),
+      body: Row(
         children: [
-          // Editor de código
+          // Editor de comandos à esquerda
           Expanded(
+            flex: 1,
             child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.green.shade800, width: 3),
-                color: Colors.white,
-              ),
-              margin: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: _controller,
-                maxLines: null,
-                expands: true,
-                style: const TextStyle(
-                  fontFamily: 'Courier New',
-                  fontSize: 16,
-                ),
-                decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.all(16),
-                  border: InputBorder.none,
-                  hintText: 'Digite seu código BRHTML aqui...',
-                ),
-              ),
-            ),
-          ),
-          
-          // Barra de botões
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Botão para limpar o editor
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _controller.clear();
-                      _saida = "";
-                    });
-                  },
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  label: const Text('Limpar', style: TextStyle(color: Colors.red)),
-                ),
-                const Spacer(),
-                // Botão RUN com ícone de play
-                ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _saida = interpretarBrHTML(_controller.text);
-                      _mostraHTML = false;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade800,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text(
-                    'Visualizar',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Botão Código fonte
-                ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _saida = interpretarBrHTML(_controller.text);
-                      _mostraHTML = true;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade800,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  icon: const Text('</>', style: TextStyle(fontWeight: FontWeight.bold)),
-                  label: const Text('Ver HTML', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          ),
-          
-          // Área de saída
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.green.shade800, width: 3),
-                color: Colors.white,
-              ),
-              margin: const EdgeInsets.all(8.0),
-              padding: const EdgeInsets.all(16.0),
-              child: _mostraHTML
-                ? // Mostrar HTML
-                  SingleChildScrollView(
-                    child: SelectableText(
-                      _saida,
-                      style: const TextStyle(
-                        fontFamily: 'Courier New',
-                        fontSize: 16,
-                      ),
-                    ),
-                  )
-                : // Mostrar renderização
-                  _saida.isEmpty
-                    ? const Center(child: Text("Execute o código para ver o resultado."))
-                    : SingleChildScrollView(
-                        child: Html(
-                          data: _saida,
-                          style: {
-                            "body": Style(margin: Margins.zero//, padding: EdgeInsets.zero
-                            ),
-                          },
+              color: const Color(0xFF1E1E1E),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Editor', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        maxLines: null,
+                        expands: true,
+                        style: const TextStyle(fontFamily: 'Fira Mono'),
+                        decoration: const InputDecoration(
+                          hintText: 'Digite seus comandos BRDart aqui...\nExemplo: diga Olá Mundo!',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Color(0xFF252526),
                         ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Saída à direita
+          Expanded(
+            flex: 1,
+            child: Container(
+              color: const Color(0xFF1E1E1E),
+              child: Column(
+                children: [
+                  // Botões no topo
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _executarComando,
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Executar'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: _limparSaida,
+                          icon: const Icon(Icons.clear),
+                          label: const Text('Limpar'),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: _mostrarAjuda,
+                          icon: const Icon(Icons.help_outline),
+                          label: const Text('Ajuda'),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  // Terminal de saída
+                  Expanded(
+                    child: Container(
+                      color: const Color(0xFF1E1E1E),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _saida.length,
+                        itemBuilder: (context, index) => Text(
+                          _saida[index],
+                          style: const TextStyle(fontFamily: 'Fira Mono', fontSize: 15),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+class InterpretadorBR {
+  final Map<String, String> variaveis = {};
+
+  String interpretarLinha(String linha) {
+    final tokens = linha.trim().split(RegExp(r"\s+"));
+    if (tokens.isEmpty) return "";
+
+    final comando = tokens[0];
+
+    switch (comando) {
+      case "diga":
+        return tokens.sublist(1).join(" ");
+
+      case "soma":
+        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
+        final a = double.tryParse(tokens[1]);
+        final b = double.tryParse(tokens[2]);
+        if (a == null || b == null) return "Erro na soma: argumentos inválidos.";
+        return "${a + b}";
+
+      case "define":
+        if (tokens.length < 4 || tokens[2] != "=") {
+          return "Erro: use 'define nome = valor'.";
+        }
+        final nome = tokens[1];
+        final valor = tokens.sublist(3).join(" ");
+        variaveis[nome] = valor;
+        return "Variável '$nome' definida com valor '$valor'.";
+
+      case "mostre":
+        final nome = tokens[1];
+        return variaveis[nome] ?? "Variável '$nome' não definida.";
+
+      default:
+        return "Comando desconhecido: $comando";
+    }
   }
 }
