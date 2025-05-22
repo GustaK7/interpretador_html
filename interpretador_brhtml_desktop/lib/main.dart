@@ -166,28 +166,32 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
                 ),
                 // Barra lateral de ajuda
                 if (_ajudaAberta)
-                  Container(
-                    width: 350,
-                    color: const Color(0xFF23272E),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Ajuda BRDart', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-                                IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.white70),
-                                  onPressed: _alternarAjuda,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _ajudaComandos(),
-                          ],
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      width: 350,
+                      height: double.infinity,
+                      color: const Color(0xFF23272E),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Ajuda BRDart', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Colors.white70),
+                                    onPressed: _alternarAjuda,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _ajudaComandos(),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -252,50 +256,99 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
   Widget _ajudaComandos() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text('Comandos básicos:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        SizedBox(height: 8),
-        Text('diga <mensagem>', style: TextStyle(color: Colors.amber)),
-        Text('Exibe uma mensagem.'),
-        SizedBox(height: 12),
-        Text('soma <a> <b>', style: TextStyle(color: Colors.amber)),
-        Text('Soma dois números.'),
-        SizedBox(height: 12),
-        Text('subtrai <a> <b>', style: TextStyle(color: Colors.amber)),
-        Text('Subtrai dois números.'),
-        SizedBox(height: 12),
-        Text('multiplica <a> <b>', style: TextStyle(color: Colors.amber)),
-        Text('Multiplica dois números.'),
-        SizedBox(height: 12),
-        Text('divide <a> <b>', style: TextStyle(color: Colors.amber)),
-        Text('Divide dois números.'),
-        SizedBox(height: 12),
-        Text('resto <a> <b>', style: TextStyle(color: Colors.amber)),
-        Text('Resto da divisão inteira.'),
-        SizedBox(height: 12),
-        Text('define <nome> = <valor>', style: TextStyle(color: Colors.amber)),
-        Text('Define uma variável.'),
-        SizedBox(height: 12),
-        Text('mostre <nome>', style: TextStyle(color: Colors.amber)),
-        Text('Mostra o valor de uma variável.'),
-        SizedBox(height: 12),
-        Text('repita <n> <comando>', style: TextStyle(color: Colors.amber)),
-        Text('Repete um comando n vezes.'),
-        SizedBox(height: 12),
-        Text('se <a> <op> <b> <comando> [senao <comando>]', style: TextStyle(color: Colors.amber)),
-        Text('Executa comando se condição for verdadeira.'),
-        SizedBox(height: 20),
-        Text('Widgets:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        SizedBox(height: 8),
-        Text('box{', style: TextStyle(color: Colors.lightBlueAccent)),
-        Text('  cor.box = verde'),
-        Text('  text{'),
-        Text('    cor.texto = branco'),
-        Text('    "Esse é um widget"'),
-        Text('  }'),
-        Text('}'),
-        SizedBox(height: 8),
-        Text('Cores disponíveis: azul, verde, vermelho, amarelo, preto, branco, cinza, laranja, roxo, rosa', style: TextStyle(fontSize: 13)),
+      children: [
+        ExpansionTile(
+          title: const Text('Comandos básicos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          initiallyExpanded: true,
+          children: [
+            const ListTile(
+              title: Text('diga <mensagem>', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Exibe uma mensagem.'),
+            ),
+            const ListTile(
+              title: Text('soma <a> <b>', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Soma dois números.'),
+            ),
+            const ListTile(
+              title: Text('subtrai <a> <b>', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Subtrai dois números.'),
+            ),
+            const ListTile(
+              title: Text('multiplica <a> <b>', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Multiplica dois números.'),
+            ),
+            const ListTile(
+              title: Text('divide <a> <b>', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Divide dois números.'),
+            ),
+            const ListTile(
+              title: Text('resto <a> <b>', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Resto da divisão inteira.'),
+            ),
+            const ListTile(
+              title: Text('define <nome> = <valor>', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Define uma variável.'),
+            ),
+            const ListTile(
+              title: Text('mostre <nome>', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Mostra o valor de uma variável.'),
+            ),
+            const ListTile(
+              title: Text('repita <n> <comando>', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Repete um comando n vezes.'),
+            ),
+            const ListTile(
+              title: Text('se <a> <op> <b> <comando> [senao <comando>]', style: TextStyle(color: Colors.amber)),
+              subtitle: Text('Executa comando se condição for verdadeira.'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ExpansionTile(
+          title: Text('Widgets', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.lightBlueAccent)),
+          initiallyExpanded: true,
+          children: [
+            ListTile(
+              title: Text('box{ ... }', style: TextStyle(color: Colors.lightBlueAccent)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('Cria uma caixa. Pode conter outros widgets ou caixas aninhadas.'),
+                  SizedBox(height: 8),
+                  Text('Exemplo:'),
+                  SizedBox(height: 4),
+                  SelectableText('''box{
+  cor.box = verde
+  texto{
+    cor.texto = branco
+    "Esse é um widget"
+  }
+}''', style: TextStyle(fontFamily: 'Fira Mono', fontSize: 13)),
+                ],
+              ),
+            ),
+            ListTile(
+              title: Text('texto{ ... } ou text{ ... }', style: TextStyle(color: Colors.lightBlueAccent)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('Exibe um texto. Pode definir cor dentro do bloco.'),
+                  SizedBox(height: 8),
+                  Text('Exemplo:'),
+                  SizedBox(height: 4),
+                  SelectableText('''texto{
+  cor.texto = vermelho
+  "Olá mundo!"
+}''', style: TextStyle(fontFamily: 'Fira Mono', fontSize: 13)),
+                ],
+              ),
+            ),
+            ListTile(
+              title: Text('Cores disponíveis', style: TextStyle(color: Colors.lightBlueAccent)),
+              subtitle: Text('azul, verde, vermelho, amarelo, preto, branco, cinza, laranja, roxo, rosa', style: TextStyle(fontSize: 13)),
+            ),
+          ],
+        ),
       ],
     );
   }
