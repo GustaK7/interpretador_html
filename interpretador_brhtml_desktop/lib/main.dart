@@ -63,9 +63,25 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
               SizedBox(height: 8),
               Text('soma 2 3'),
               SizedBox(height: 8),
+              Text('subtrai 10 4'),
+              SizedBox(height: 8),
+              Text('multiplica 3 5'),
+              SizedBox(height: 8),
+              Text('divide 10 2'),
+              SizedBox(height: 8),
+              Text('resto 10 3'),
+              SizedBox(height: 8),
               Text('define nome = João'),
               SizedBox(height: 8),
               Text('mostre nome'),
+              SizedBox(height: 8),
+              Text('repita 3 diga Olá'),
+              SizedBox(height: 8),
+              Text('se 2 > 1 diga Verdadeiro'),
+              SizedBox(height: 8),
+              Text('se nome == João diga Bem-vindo'),
+              SizedBox(height: 8),
+              Text('se 2 > 3 diga Não senao diga Sim'),
             ],
           ),
         ),
@@ -195,6 +211,36 @@ class InterpretadorBR {
         if (a == null || b == null) return "Erro na soma: argumentos inválidos.";
         return "${a + b}";
 
+      case "subtrai":
+        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
+        final a = double.tryParse(tokens[1]);
+        final b = double.tryParse(tokens[2]);
+        if (a == null || b == null) return "Erro na subtração: argumentos inválidos.";
+        return "${a - b}";
+
+      case "multiplica":
+        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
+        final a = double.tryParse(tokens[1]);
+        final b = double.tryParse(tokens[2]);
+        if (a == null || b == null) return "Erro na multiplicação: argumentos inválidos.";
+        return "${a * b}";
+
+      case "divide":
+        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
+        final a = double.tryParse(tokens[1]);
+        final b = double.tryParse(tokens[2]);
+        if (a == null || b == null) return "Erro na divisão: argumentos inválidos.";
+        if (b == 0) return "Erro: divisão por zero.";
+        return "${a / b}";
+
+      case "resto":
+        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
+        final a = int.tryParse(tokens[1]);
+        final b = int.tryParse(tokens[2]);
+        if (a == null || b == null) return "Erro no resto: argumentos inválidos.";
+        if (b == 0) return "Erro: divisão por zero.";
+        return "${a % b}";
+
       case "define":
         if (tokens.length < 4 || tokens[2] != "=") {
           return "Erro: use 'define nome = valor'.";
@@ -207,6 +253,56 @@ class InterpretadorBR {
       case "mostre":
         final nome = tokens[1];
         return variaveis[nome] ?? "Variável '$nome' não definida.";
+
+      case "repita":
+        if (tokens.length < 3) return "Erro: use 'repita n comando ...'";
+        final vezes = int.tryParse(tokens[1]);
+        if (vezes == null || vezes < 1) return "Erro: número de repetições inválido.";
+        final comandoRepetido = tokens.sublist(2).join(" ");
+        final resultados = <String>[];
+        for (int i = 0; i < vezes; i++) {
+          resultados.add(interpretarLinha(comandoRepetido));
+        }
+        return resultados.join("\n");
+
+      case "se":
+        if (tokens.length < 5) return "Erro: use 'se valor1 operador valor2 comando ...'";
+        final valor1 = tokens[1];
+        final operador = tokens[2];
+        final valor2 = tokens[3];
+        bool condicao = false;
+        final num1 = double.tryParse(valor1);
+        final num2 = double.tryParse(valor2);
+        if (num1 != null && num2 != null) {
+          switch (operador) {
+            case '==': condicao = num1 == num2; break;
+            case '!=': condicao = num1 != num2; break;
+            case '>': condicao = num1 > num2; break;
+            case '<': condicao = num1 < num2; break;
+            case '>=': condicao = num1 >= num2; break;
+            case '<=': condicao = num1 <= num2; break;
+            default: return "Erro: operador desconhecido '$operador'";
+          }
+        } else {
+          switch (operador) {
+            case '==': condicao = valor1 == valor2; break;
+            case '!=': condicao = valor1 != valor2; break;
+            default: return "Erro: operador '$operador' só suporta números.";
+          }
+        }
+        // Procura por 'senao' nos tokens
+        int senaoIndex = tokens.indexWhere((t) => t == 'senao', 4);
+        if (condicao) {
+          final comandoCondicional = senaoIndex == -1
+              ? tokens.sublist(4).join(" ")
+              : tokens.sublist(4, senaoIndex).join(" ");
+          return interpretarLinha(comandoCondicional);
+        } else if (senaoIndex != -1 && senaoIndex + 1 < tokens.length) {
+          final comandoSenao = tokens.sublist(senaoIndex + 1).join(" ");
+          return interpretarLinha(comandoSenao);
+        } else {
+          return "";
+        }
 
       default:
         return "Comando desconhecido: $comando";
