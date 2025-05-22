@@ -572,7 +572,7 @@ class InterpretadorBR {
         return 'Erro ao interpretar tela: $e';
       }
     }
-    final tokens = linha.trim().split(RegExp(r"\\s+"));
+    final tokens = linha.trim().split(RegExp(r"\s+"));
     if (tokens.isEmpty) return "";
     final comando = tokens[0];
     switch (comando) {
@@ -581,8 +581,8 @@ class InterpretadorBR {
 
       case "soma":
         if (tokens.length < 3) return "Erro: argumentos insuficientes.";
-        final a = double.tryParse(tokens[1]);
-        final b = double.tryParse(tokens[2]);
+        final a = double.tryParse(tokens[1].replaceAll(',', '.'));
+        final b = double.tryParse(tokens[2].replaceAll(',', '.'));
         if (a == null || b == null) return "Erro na soma: argumentos inválidos.";
         return "${a + b}";
 
