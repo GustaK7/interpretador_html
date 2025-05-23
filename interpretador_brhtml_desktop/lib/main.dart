@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show rootBundle;
+import 'download_helper.dart';
 
 void main() {
   runApp(const InterpretadorApp());
@@ -103,6 +107,54 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green.shade700,
                     foregroundColor: Colors.white,
+                    elevation: 0,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    // Pergunta o nome do arquivo ao usuário
+                    String? nome = await showDialog<String>(
+                      context: context,
+                      builder: (ctx) {
+                        final controller = TextEditingController(text: 'meu_projeto.brdart');
+                        return AlertDialog(
+                          title: const Text('Salvar código como'),
+                          content: TextField(
+                            controller: controller,
+                            decoration: const InputDecoration(
+                              labelText: 'Nome do arquivo',
+                              hintText: 'ex: meu_projeto.brdart',
+                            ),
+                            autofocus: true,
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              child: const Text('Cancelar'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                String nome = controller.text.trim();
+                                if (!nome.endsWith('.brdart')) nome += '.brdart';
+                                Navigator.of(ctx).pop(nome);
+                              },
+                              child: const Text('Salvar'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (nome != null && nome.isNotEmpty) {
+                      final codigo = _controller.text;
+                      await downloadCodigoBrdart(codigo, nome);
+                    }
+                  },
+                  icon: const Icon(Icons.download),
+                  label: const Text('Download'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.black,
                     elevation: 0,
                   ),
                 ),
@@ -264,6 +316,91 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(
+          children: [
+            ElevatedButton.icon(
+              onPressed: () async {
+                String doc;
+                try {
+                  if (kIsWeb) {
+                    doc = await rootBundle.loadString('DOCUMENTACAO.md');
+                  } else {
+                    final file = File('DOCUMENTACAO.md');
+                    doc = await file.readAsString();
+                  }
+                } catch (_) {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Erro'),
+                      content: const Text('Arquivo DOCUMENTACAO.md não encontrado.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Fechar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return;
+                }
+                // Diálogo para exportar apenas como TXT
+                bool? confirmar = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Exportar documentação'),
+                    content: const Text('Deseja exportar a documentação como arquivo TXT?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Cancelar'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Exportar TXT'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmar == true) {
+                  await downloadOrShowDoc(
+                    doc,
+                    showDialogDesktop: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Documentação BRDart'),
+                          content: SizedBox(
+                            width: 500,
+                            height: 500,
+                            child: SingleChildScrollView(
+                              child: SelectableText(doc, style: const TextStyle(fontFamily: 'Fira Mono', fontSize: 13)),
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              child: const Text('Fechar'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }
+              },
+              icon: const Icon(Icons.menu_book),
+              label: const Text('Ver documentação'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                foregroundColor: Colors.black,
+                elevation: 0,
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+        ),
+        const SizedBox(height: 8),
         ExpansionTile(
           title: const Text('Comandos básicos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.amber)),
           initiallyExpanded: true,
