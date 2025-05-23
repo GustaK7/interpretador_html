@@ -41,7 +41,7 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
       _widgetsDinamicos.clear();
       _mensagens.clear();
       try {
-        final resultado = _interpretador.interpretarBloco(texto, adicionarWidget: _adicionarWidget, adicionarMensagem: _adicionarMensagem);
+        final resultado = _interpretador.interpretarBlocoSintaxeNova(texto, adicionarWidget: _adicionarWidget, adicionarMensagem: _adicionarMensagem);
         if (resultado.isNotEmpty) {
           _mensagens.add(resultado);
         }
@@ -49,12 +49,13 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
         _mensagens.add('Erro: $e');
       }
     });
-    _controller.clear();
+    // Não limpar o controller para manter o texto digitado
+    // _controller.clear();
   }
 
   void _adicionarWidget(Widget widget) {
     setState(() {
-      _widgetsDinamicos.clear();
+      // Não limpar, apenas adicionar para permitir múltiplos widgets
       _widgetsDinamicos.add(widget);
     });
   }
@@ -77,6 +78,12 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
     setState(() {
       _ajudaAberta = !_ajudaAberta;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _interpretador.setAdicionarMensagemGlobal(_adicionarMensagem);
   }
 
   @override
@@ -127,128 +134,128 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
           ],
         ),
       ),
-      body: Column(
+      body: Row(
         children: [
+          // Editor de comandos à esquerda
           Expanded(
-            child: Row(
-              children: [
-                // Editor de comandos à esquerda
-                Expanded(
-                  flex: _ajudaAberta ? 2 : 1,
-                  child: Container(
-                    color: const Color(0xFF1E1E1E),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Editor', style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _controller,
-                            maxLines: null,
-                            minLines: 5,
-                            style: const TextStyle(fontFamily: 'Fira Mono'),
-                            decoration: const InputDecoration(
-                              hintText: 'Digite seus comandos BRDart aqui...}',
-                              border: OutlineInputBorder(),
-                              filled: true,
-                              fillColor: Color(0xFF252526),
-                              contentPadding: EdgeInsets.all(12),
+            flex: _ajudaAberta ? 2 : 1,
+            child: Container(
+              color: const Color(0xFF1E1E1E),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Editor', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _controller,
+                      maxLines: null,
+                      minLines: 5,
+                      style: const TextStyle(fontFamily: 'Fira Mono'),
+                      decoration: const InputDecoration(
+                        hintText: 'Digite seus comandos BRDart aqui...}',
+                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Color(0xFF252526),
+                        contentPadding: EdgeInsets.all(12),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Expanded(child: SizedBox()),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Saída à direita
+          Expanded(
+            flex: 2,
+            child: Container(
+              color: const Color(0xFF1E1E1E),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        // Saída de texto (não usada, mas mantida para compatibilidade)
+                        ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: _saida.length,
+                          itemBuilder: (context, index) => Text(
+                            _saida[index],
+                            style: const TextStyle(fontFamily: 'Fira Mono', fontSize: 15),
+                          ),
+                        ),
+                        // Widgets dinâmicos centralizados
+                        if (_widgetsDinamicos.isNotEmpty)
+                          Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ..._widgetsDinamicos,
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          const Expanded(child: SizedBox()),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // Barra lateral de ajuda
-                if (_ajudaAberta)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Container(
-                      width: 350,
-                      height: double.infinity,
-                      color: const Color(0xFF23272E),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Ajuda BRDart', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-                                  IconButton(
-                                    icon: const Icon(Icons.close, color: Colors.white70),
-                                    onPressed: _alternarAjuda,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              _ajudaComandos(),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                // Saída à direita
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    color: const Color(0xFF1E1E1E),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              // Saída de texto (não usada, mas mantida para compatibilidade)
-                              ListView.builder(
-                                padding: const EdgeInsets.all(12),
-                                itemCount: _saida.length,
-                                itemBuilder: (context, index) => Text(
-                                  _saida[index],
-                                  style: const TextStyle(fontFamily: 'Fira Mono', fontSize: 15),
+                        // Menu lateral de ajuda à direita
+                        if (_ajudaAberta)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              width: 350,
+                              color: const Color(0xFF23272E),
+                              child: Padding(
+                                padding: const EdgeInsets.all(0),
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      color: const Color(0xFF181C20),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text('Ajuda BRDart', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white)),
+                                          IconButton(
+                                            icon: const Icon(Icons.close, color: Colors.white70),
+                                            onPressed: _alternarAjuda,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Divider(height: 1, color: Colors.white12),
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        padding: const EdgeInsets.all(16),
+                                        child: _ajudaComandos(),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              // Widgets dinâmicos centralizados
-                              if (_widgetsDinamicos.isNotEmpty)
-                                Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      ..._widgetsDinamicos,
-                                    ],
-                                  ),
-                                ),
-                            ],
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Terminal de mensagens estilo VS Code (agora ocupa toda a largura)
-          Container(
-            width: double.infinity,
-            color: const Color(0xFF181818),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Terminal', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
-                ..._mensagens.map((msg) => Text(msg, style: const TextStyle(fontFamily: 'Fira Mono', color: Colors.greenAccent, fontSize: 14))),
-              ],
+                ],
+              ),
             ),
           ),
         ],
+      ),
+      // Terminal de mensagens estilo VS Code (agora ocupa toda a largura)
+      bottomNavigationBar: Container(
+        width: double.infinity,
+        color: const Color(0xFF181818),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Terminal', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+            ..._mensagens.map((msg) => Text(msg, style: const TextStyle(fontFamily: 'Fira Mono', color: Colors.greenAccent, fontSize: 14))),
+          ],
+        ),
       ),
     );
   }
@@ -258,98 +265,70 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ExpansionTile(
-          title: const Text('Comandos básicos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          title: const Text('Comandos básicos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.amber)),
           initiallyExpanded: true,
           children: [
-            const ListTile(
-              title: Text('diga <mensagem>', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Exibe uma mensagem.'),
+            _ajudaItem('diga <mensagem>', 'Exibe uma mensagem.'),
+            _ajudaItem('soma <a> <b>', 'Soma dois números.'),
+            _ajudaItem('subtrai <a> <b>', 'Subtrai dois números.'),
+            _ajudaItem('multiplica <a> <b>', 'Multiplica dois números.'),
+            _ajudaItem('divide <a> <b>', 'Divide dois números.'),
+            _ajudaItem('resto <a> <b>', 'Resto da divisão inteira.'),
+            _ajudaItem('define <nome> = <valor>', 'Define uma variável.'),
+            _ajudaItem('mostre <nome>', 'Mostra o valor de uma variável.'),
+            _ajudaItem('repita <n> <comando>', 'Repete um comando n vezes.'),
+            _ajudaItem('Se (condição) {bloco} senao {bloco}', 'Executa bloco se condição for verdadeira, senão executa o outro bloco.'),
+            const SizedBox(height: 8),
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: Text('Separação de comandos:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
             ),
-            const ListTile(
-              title: Text('soma <a> <b>', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Soma dois números.'),
-            ),
-            const ListTile(
-              title: Text('subtrai <a> <b>', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Subtrai dois números.'),
-            ),
-            const ListTile(
-              title: Text('multiplica <a> <b>', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Multiplica dois números.'),
-            ),
-            const ListTile(
-              title: Text('divide <a> <b>', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Divide dois números.'),
-            ),
-            const ListTile(
-              title: Text('resto <a> <b>', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Resto da divisão inteira.'),
-            ),
-            const ListTile(
-              title: Text('define <nome> = <valor>', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Define uma variável.'),
-            ),
-            const ListTile(
-              title: Text('mostre <nome>', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Mostra o valor de uma variável.'),
-            ),
-            const ListTile(
-              title: Text('repita <n> <comando>', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Repete um comando n vezes.'),
-            ),
-            const ListTile(
-              title: Text('se <a> <op> <b> <comando> [senao <comando>]', style: TextStyle(color: Colors.amber)),
-              subtitle: Text('Executa comando se condição for verdadeira.'),
-            ),
+            const Text('Use ponto e vírgula (;) para separar comandos, inclusive dentro de blocos com chaves.', style: TextStyle(color: Colors.white70, fontSize: 13)),
           ],
         ),
         const SizedBox(height: 12),
         ExpansionTile(
-          title: Text('Widgets', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.lightBlueAccent)),
+          title: const Text('Widgets', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.lightBlueAccent)),
           initiallyExpanded: true,
           children: [
-            ListTile(
-              title: Text('box{ ... }', style: TextStyle(color: Colors.lightBlueAccent)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('Cria uma caixa. Pode conter outros widgets ou caixas aninhadas.'),
-                  SizedBox(height: 8),
-                  Text('Exemplo:'),
-                  SizedBox(height: 4),
-                  SelectableText('''box{
-  cor.box = verde
-  texto{
-    cor.texto = branco
-    "Esse é um widget"
-  }
-}''', style: TextStyle(fontFamily: 'Fira Mono', fontSize: 13)),
-                ],
-              ),
+            _ajudaItem('box{ ... }', 'Cria uma caixa. Pode conter outros widgets ou caixas aninhadas.'),
+            _ajudaItem('texto{ ... } ou text{ ... }', 'Exibe um texto. Pode definir cor dentro do bloco.'),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: Text('Cores disponíveis:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
             ),
-            ListTile(
-              title: Text('texto{ ... } ou text{ ... }', style: TextStyle(color: Colors.lightBlueAccent)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('Exibe um texto. Pode definir cor dentro do bloco.'),
-                  SizedBox(height: 8),
-                  Text('Exemplo:'),
-                  SizedBox(height: 4),
-                  SelectableText('''texto{
-  cor.texto = vermelho
-  "Olá mundo!"
-}''', style: TextStyle(fontFamily: 'Fira Mono', fontSize: 13)),
-                ],
-              ),
+            const Text('azul, verde, vermelho, amarelo, preto, branco, cinza, laranja, roxo, rosa', style: TextStyle(fontSize: 13, color: Colors.white70)),
+            const SizedBox(height: 8),
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: Text('Exemplo de widget:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
             ),
-            ListTile(
-              title: Text('Cores disponíveis', style: TextStyle(color: Colors.lightBlueAccent)),
-              subtitle: Text('azul, verde, vermelho, amarelo, preto, branco, cinza, laranja, roxo, rosa', style: TextStyle(fontSize: 13)),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(bottom: 8),
+              child: const SelectableText(
+                'box{\n  cor.box = verde;\n  texto{\n    cor.texto = branco;\n    "Esse é um widget";\n  }\n}',
+                style: TextStyle(fontFamily: 'Fira Mono', fontSize: 13, color: Colors.lightGreenAccent),
+              ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _ajudaItem(String comando, String descricao) {
+    return ListTile(
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+      title: Text(comando, style: const TextStyle(color: Colors.amber, fontFamily: 'Fira Mono', fontWeight: FontWeight.bold)),
+      subtitle: Text(descricao, style: const TextStyle(color: Colors.white70)),
     );
   }
 }
@@ -364,78 +343,56 @@ class InterpretadorBR {
     bloco = bloco.trim();
     if (bloco.startsWith('box{')) {
       final inner = _extrairBloco(bloco.substring(3).trim());
-      Color corBox = _corBox;
-      Widget? child;
-      final filhos = <Widget>[];
-      final linhas = _linhasBloco(inner);
-      for (final linha in linhas) {
-        final l = linha.trim();
-        if (l.startsWith('cor.box')) {
-          final partes = l.split('=');
-          if (partes.length == 2) {
-            final cor = _parseCor(partes[1].trim());
-            if (cor != null) {
-              corBox = cor;
-              adicionarMensagem?.call('Cor da caixa definida.');
-            } else {
-              adicionarMensagem?.call('Cor de caixa desconhecida.');
-            }
-          }
-        } else if (l.startsWith('text{') || l.startsWith('texto{')) {
-          final widget = _interpretarBlocoWidget(l, adicionarMensagem: adicionarMensagem);
-          if (widget != null) filhos.add(widget);
-        } else if (l.startsWith('box{')) {
-          final widget = _interpretarBlocoWidget(l, adicionarMensagem: adicionarMensagem);
-          if (widget != null) filhos.add(widget);
-        }
+      final List<Widget> filhos = [];
+      final List<String> mensagensPendentes = [];
+      interpretarBlocoSintaxeNova(
+        inner,
+        adicionarWidget: (w) => filhos.add(w),
+        adicionarMensagem: (msg) {
+          if (msg.trim().isNotEmpty) mensagensPendentes.add(msg.trim());
+        },
+      );
+      for (final msg in mensagensPendentes) {
+        filhos.add(Text(msg, style: TextStyle(fontSize: 16, color: _corTexto)));
       }
+      Widget? child;
       if (filhos.isNotEmpty) {
-        child = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: filhos,
-        );
+        child = filhos.length == 1 ? filhos.first : Column(crossAxisAlignment: CrossAxisAlignment.start, children: filhos);
       }
       final box = Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: corBox,
+          color: _corBox,
           borderRadius: BorderRadius.circular(8),
         ),
         child: child,
       );
       adicionarWidget?.call(box);
-      return 'Widget box renderizado!';
+      return '';
     } else if (bloco.startsWith('text{') || bloco.startsWith('texto{')) {
       final inner = bloco.startsWith('text{')
           ? _extrairBloco(bloco.substring(4).trim())
           : _extrairBloco(bloco.substring(5).trim());
-      Color corTexto = _corTexto;
-      String conteudo = '';
-      final linhas = _linhasBloco(inner);
-      for (final linha in linhas) {
-        final l = linha.trim();
-        if (l.startsWith('cor.texto')) {
-          final partes = l.split('=');
-          if (partes.length == 2) {
-            final cor = _parseCor(partes[1].trim());
-            if (cor != null) {
-              corTexto = cor;
-              adicionarMensagem?.call('Cor do texto definida.');
-            } else {
-              adicionarMensagem?.call('Cor de texto desconhecida.');
-            }
-          }
-        } else if (l.startsWith('"') && l.endsWith('"')) {
-          conteudo = l.substring(1, l.length - 1);
-        } else {
-          conteudo = l;
-        }
+      final List<Widget> filhos = [];
+      final List<String> mensagensPendentes = [];
+      interpretarBlocoSintaxeNova(
+        inner,
+        adicionarWidget: (w) => filhos.add(w),
+        adicionarMensagem: (msg) {
+          if (msg.trim().isNotEmpty) mensagensPendentes.add(msg.trim());
+        },
+      );
+      for (final msg in mensagensPendentes) {
+        filhos.add(Text(msg, style: TextStyle(fontSize: 20, color: _corTexto)));
       }
       if (adicionarWidget != null) {
-        adicionarWidget(Text(conteudo, style: TextStyle(fontSize: 20, color: corTexto)));
+        if (filhos.isNotEmpty) {
+          final widget = filhos.length == 1 ? filhos.first : Column(crossAxisAlignment: CrossAxisAlignment.start, children: filhos);
+          adicionarWidget(widget);
+        }
       }
-      return 'Widget texto renderizado!';
+      return '';
     } else {
       // Comandos simples e variáveis
       final resultado = interpretarLinha(bloco, adicionarWidget: adicionarWidget);
@@ -444,82 +401,6 @@ class InterpretadorBR {
       }
       return '';
     }
-  }
-
-  Widget? _interpretarBlocoWidget(String bloco, {Color? corTexto, void Function(String)? adicionarMensagem}) {
-    bloco = bloco.trim();
-    if (bloco.startsWith('text{') || bloco.startsWith('texto{')) {
-      final inner = bloco.startsWith('text{')
-          ? _extrairBloco(bloco.substring(4).trim())
-          : _extrairBloco(bloco.substring(5).trim());
-      Color cor = corTexto ?? _corTexto;
-      String conteudo = '';
-      final linhas = _linhasBloco(inner);
-      for (final linha in linhas) {
-        final l = linha.trim();
-        if (l.startsWith('cor.texto')) {
-          final partes = l.split('=');
-          if (partes.length == 2) {
-            final corParsed = _parseCor(partes[1].trim());
-            if (corParsed != null) {
-              cor = corParsed;
-              adicionarMensagem?.call('Cor do texto definida.');
-            } else {
-              adicionarMensagem?.call('Cor de texto desconhecida.');
-            }
-          }
-        } else if (l.startsWith('"') && l.endsWith('"')) {
-          conteudo = l.substring(1, l.length - 1);
-        } else {
-          conteudo = l;
-        }
-      }
-      return Text(conteudo, style: TextStyle(fontSize: 20, color: cor));
-    } else if (bloco.startsWith('box{')) {
-      // Permite box aninhado
-      final inner = _extrairBloco(bloco.substring(3).trim());
-      Color corBox = _corBox;
-      Widget? child;
-      final filhos = <Widget>[];
-      final linhas = _linhasBloco(inner);
-      for (final linha in linhas) {
-        final l = linha.trim();
-        if (l.startsWith('cor.box')) {
-          final partes = l.split('=');
-          if (partes.length == 2) {
-            final cor = _parseCor(partes[1].trim());
-            if (cor != null) {
-              corBox = cor;
-              adicionarMensagem?.call('Cor da caixa definida.');
-            } else {
-              adicionarMensagem?.call('Cor de caixa desconhecida.');
-            }
-          }
-        } else if (l.startsWith('text{') || l.startsWith('texto{')) {
-          final widget = _interpretarBlocoWidget(l, adicionarMensagem: adicionarMensagem);
-          if (widget != null) filhos.add(widget);
-        } else if (l.startsWith('box{')) {
-          final widget = _interpretarBlocoWidget(l, adicionarMensagem: adicionarMensagem);
-          if (widget != null) filhos.add(widget);
-        }
-      }
-      if (filhos.isNotEmpty) {
-        child = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: filhos,
-        );
-      }
-      return Container(
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: corBox,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: child,
-      );
-    }
-    return null;
   }
 
   String interpretarLinha(String linha, {void Function(Widget)? adicionarWidget}) {
@@ -572,7 +453,7 @@ class InterpretadorBR {
         return 'Erro ao interpretar tela: $e';
       }
     }
-    final tokens = linha.trim().split(RegExp(r"\s+"));
+    final tokens = linha.trim().split(RegExp(r"\\s+"));
     if (tokens.isEmpty) return "";
     final comando = tokens[0];
     switch (comando) {
@@ -680,7 +561,8 @@ class InterpretadorBR {
         }
 
       default:
-        return "Comando desconhecido: $comando";
+        // Se não reconhecido, trata como texto a ser exibido (como diga)
+        return linha.trim();
     }
   }
 
@@ -694,6 +576,22 @@ class InterpretadorBR {
     input = input.trim();
     if (input.startsWith('box{')) {
       final inner = _extrairBloco(input.substring(3).trim());
+      final List<Widget> filhos = [];
+      interpretarBlocoSintaxeNova(
+        inner,
+        adicionarWidget: (w) => filhos.add(w),
+        adicionarMensagem: (msg) {
+          if (msg.trim().isNotEmpty) {
+            if (_adicionarMensagemGlobal != null) _adicionarMensagemGlobal!(msg);
+          }
+        },
+      );
+      Widget? child;
+      if (filhos.isNotEmpty) {
+        child = filhos.length == 1 ? filhos.first : Column(crossAxisAlignment: CrossAxisAlignment.start, children: filhos);
+      } else {
+        child = const SizedBox.shrink();
+      }
       return Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(16),
@@ -701,14 +599,37 @@ class InterpretadorBR {
           color: _corBox,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: _parseWidget(inner),
+        child: child,
       );
     } else if (input.startsWith('texto{')) {
       final inner = _extrairBloco(input.substring(5).trim());
-      return Text(inner, style: TextStyle(fontSize: 20, color: _corTexto));
+      final List<Widget> filhos = [];
+      interpretarBlocoSintaxeNova(
+        inner,
+        adicionarWidget: (w) => filhos.add(w),
+        adicionarMensagem: (msg) {
+          if (msg.trim().isNotEmpty) {
+            if (_adicionarMensagemGlobal != null) _adicionarMensagemGlobal!(msg);
+          }
+        },
+      );
+      Widget? child;
+      if (filhos.isNotEmpty) {
+        child = filhos.length == 1 ? filhos.first : Column(crossAxisAlignment: CrossAxisAlignment.start, children: filhos);
+      } else {
+        child = const SizedBox.shrink();
+      }
+      return child;
     } else {
       throw 'Bloco desconhecido: $input';
     }
+  }
+
+  // Ponteiro global para adicionar mensagens ao terminal
+  void Function(String)? _adicionarMensagemGlobal;
+
+  void setAdicionarMensagemGlobal(void Function(String) fn) {
+    _adicionarMensagemGlobal = fn;
   }
 
   Color? _parseCor(String cor) {
@@ -748,23 +669,179 @@ class InterpretadorBR {
     return input.substring(start, end).trim();
   }
 
-  // Função utilitária para dividir blocos em linhas ignorando chaves aninhadas
-  List<String> _linhasBloco(String bloco) {
-    List<String> linhas = [];
-    int nivel = 0;
+  // Novo método para sintaxe com chaves e ponto e vírgula
+  String interpretarBlocoSintaxeNova(String bloco, {void Function(Widget)? adicionarWidget, void Function(String)? adicionarMensagem}) {
+    List<String> comandos = _splitComandosPorPontoEVirgula(bloco);
+    String saida = '';
+    for (var comando in comandos) {
+      comando = comando.trim();
+      if (comando.isEmpty) continue;
+      if (comando.startsWith(RegExp(r'Se|se'))) {
+        saida += _interpretarSeBloco(comando, adicionarWidget: adicionarWidget, adicionarMensagem: adicionarMensagem) + '\n';
+      } else if (comando.startsWith('box{') || comando.startsWith('texto{') || comando.startsWith('text{')) {
+        try {
+          final widget = _parseWidget(comando);
+          if (adicionarWidget != null) adicionarWidget(widget);
+        } catch (e) {
+          if (adicionarMensagem != null) adicionarMensagem('Erro ao interpretar widget: $e');
+        }
+      } else if (comando.startsWith('cor.box') || comando.startsWith('cor.texto')) {
+        final resultado = interpretarLinha(comando);
+        if (resultado.trim().isNotEmpty && adicionarMensagem != null) {
+          adicionarMensagem(resultado);
+        }
+      } else if (comando.startsWith('diga')) {
+        // Renderiza apenas se entre aspas
+        String conteudo = comando.substring(4).trim();
+        if (conteudo.startsWith('"') && conteudo.endsWith('"')) {
+          conteudo = conteudo.substring(1, conteudo.length - 1);
+          if (conteudo.isNotEmpty) {
+            if (adicionarWidget != null) {
+              adicionarWidget(Text(conteudo, style: TextStyle(fontSize: 16, color: _corTexto)));
+            }
+            if (adicionarMensagem != null) {
+              adicionarMensagem(conteudo);
+            }
+          }
+        }
+        // Se não estiver entre aspas, não renderiza nada
+      } else if (comando.startsWith('define') || comando.startsWith('mostre') || comando.startsWith('repita') || comando.startsWith('se ')) {
+        final resultado = interpretarLinha(comando);
+        if (resultado.trim().isNotEmpty && adicionarMensagem != null) {
+          adicionarMensagem(resultado);
+        }
+      } else {
+        // Não renderiza texto puro fora de diga
+        // Se quiser permitir, descomente abaixo:
+        // String conteudo = comando;
+        // if (conteudo.startsWith('"') && conteudo.endsWith('"')) {
+        //   conteudo = conteudo.substring(1, conteudo.length - 1);
+        // }
+        // if (conteudo.isNotEmpty) {
+        //   if (adicionarWidget != null) {
+        //     adicionarWidget(Text(conteudo, style: TextStyle(fontSize: 16, color: _corTexto)));
+        //   }
+        //   if (adicionarMensagem != null) {
+        //     adicionarMensagem(conteudo);
+        //   }
+        // }
+      }
+    }
+    return saida.trim();
+  }
+
+  List<String> _splitComandosPorPontoEVirgula(String texto) {
+    List<String> comandos = [];
+    int nivelChave = 0;
     StringBuffer atual = StringBuffer();
-    for (int i = 0; i < bloco.length; i++) {
-      final c = bloco[i];
-      if (c == '{') nivel++;
-      if (c == '}') nivel--;
-      if (c == '\n' && nivel == 0) {
-        linhas.add(atual.toString());
+    for (int i = 0; i < texto.length; i++) {
+      final c = texto[i];
+      if (c == '{') nivelChave++;
+      if (c == '}') nivelChave--;
+      if (c == ';' && nivelChave == 0) {
+        comandos.add(atual.toString());
         atual.clear();
       } else {
         atual.write(c);
       }
     }
-    if (atual.isNotEmpty) linhas.add(atual.toString());
-    return linhas;
+    if (atual.isNotEmpty) comandos.add(atual.toString());
+    return comandos;
+  }
+
+  String _interpretarSeBloco(String comando, {void Function(Widget)? adicionarWidget, void Function(String)? adicionarMensagem}) {
+    // Parsing manual para suportar blocos aninhados e múltiplos comandos
+    // Exemplo: Se (x == 3) {diga verdadeiro; diga funcionando} senao {diga falso}
+    int i = 0;
+    // 1. Encontrar início e fim da condição entre parênteses
+    while (i < comando.length && comando[i].toLowerCase() != 's') i++; // Pula até 'S' ou 's'
+    while (i < comando.length && comando[i] != '(') i++;
+    if (i >= comando.length) return 'Erro: sintaxe do Se inválida.';
+    int iniCond = i + 1;
+    int nivelPar = 1;
+    int fimCond = iniCond;
+    while (fimCond < comando.length && nivelPar > 0) {
+      if (comando[fimCond] == '(') nivelPar++;
+      if (comando[fimCond] == ')') nivelPar--;
+      fimCond++;
+    }
+    if (nivelPar != 0) return 'Erro: parênteses da condição não fechados.';
+    String condicao = comando.substring(iniCond, fimCond - 1).trim();
+    // 2. Encontrar bloco verdadeiro entre chaves
+    while (fimCond < comando.length && comando[fimCond] != '{') fimCond++;
+    if (fimCond >= comando.length) return 'Erro: bloco verdadeiro não encontrado.';
+    int iniBlocoV = fimCond + 1;
+    int nivelChave = 1;
+    int fimBlocoV = iniBlocoV;
+    while (fimBlocoV < comando.length && nivelChave > 0) {
+      if (comando[fimBlocoV] == '{') nivelChave++;
+      if (comando[fimBlocoV] == '}') nivelChave--;
+      fimBlocoV++;
+    }
+    if (nivelChave != 0) return 'Erro: bloco verdadeiro não fechado.';
+    String blocoVerdadeiro = comando.substring(iniBlocoV, fimBlocoV - 1).trim();
+    // 3. Procurar por 'senao' após bloco verdadeiro
+    int idxSenao = comando.toLowerCase().indexOf('senao', fimBlocoV);
+    String blocoFalso = '';
+    if (idxSenao != -1) {
+      int iSenao = idxSenao + 5;
+      while (iSenao < comando.length && comando[iSenao] != '{') iSenao++;
+      if (iSenao >= comando.length) return 'Erro: bloco senao não encontrado.';
+      int iniBlocoF = iSenao + 1;
+      int nivelChaveF = 1;
+      int fimBlocoF = iniBlocoF;
+      while (fimBlocoF < comando.length && nivelChaveF > 0) {
+        if (comando[fimBlocoF] == '{') nivelChaveF++;
+        if (comando[fimBlocoF] == '}') nivelChaveF--;
+        fimBlocoF++;
+      }
+      if (nivelChaveF != 0) return 'Erro: bloco senao não fechado.';
+      blocoFalso = comando.substring(iniBlocoF, fimBlocoF - 1).trim();
+    }
+    // Avalia a condição
+    bool resultadoCondicao = _avaliarCondicao(condicao);
+    if (resultadoCondicao) {
+      return interpretarBlocoSintaxeNova(blocoVerdadeiro, adicionarWidget: adicionarWidget, adicionarMensagem: adicionarMensagem);
+    } else if (blocoFalso.isNotEmpty) {
+      return interpretarBlocoSintaxeNova(blocoFalso, adicionarWidget: adicionarWidget, adicionarMensagem: adicionarMensagem);
+    } else {
+      return '';
+    }
+  }
+
+  // Avalia uma condição simples do tipo 'x == 3', 'y > 2', etc.
+  bool _avaliarCondicao(String condicao) {
+    condicao = condicao.trim();
+    // Suporta operadores ==, !=, >, <, >=, <=
+    final operadores = ['==', '!=', '>=', '<=', '>', '<'];
+    for (var op in operadores) {
+      int idx = condicao.indexOf(op);
+      if (idx != -1) {
+        String esquerda = condicao.substring(0, idx).trim();
+        String direita = condicao.substring(idx + op.length).trim();
+        // Tenta converter para número, senão compara como string
+        var valEsq = num.tryParse(esquerda) ?? variaveis[esquerda] ?? esquerda;
+        var valDir = num.tryParse(direita) ?? variaveis[direita] ?? direita;
+        switch (op) {
+          case '==':
+            return valEsq.toString() == valDir.toString();
+          case '!=':
+            return valEsq.toString() != valDir.toString();
+          case '>':
+            return (valEsq is num && valDir is num) ? valEsq > valDir : false;
+          case '<':
+            return (valEsq is num && valDir is num) ? valEsq < valDir : false;
+          case '>=':
+            return (valEsq is num && valDir is num) ? valEsq >= valDir : false;
+          case '<=':
+            return (valEsq is num && valDir is num) ? valEsq <= valDir : false;
+        }
+      }
+    }
+    // Se não encontrou operador, tenta avaliar como booleano
+    if (variaveis.containsKey(condicao)) {
+      return variaveis[condicao] == true || variaveis[condicao] == 'verdadeiro' || variaveis[condicao] == 'true';
+    }
+    return condicao.toLowerCase() == 'verdadeiro' || condicao == 'true';
   }
 }
