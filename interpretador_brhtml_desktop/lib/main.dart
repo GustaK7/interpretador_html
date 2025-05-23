@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle;
 import 'download_helper.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'download_helper_web.dart' if (dart.library.io) 'dart:io';
 
 void main() {
   runApp(const InterpretadorApp());
@@ -468,6 +471,29 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
       subtitle: Text(descricao, style: const TextStyle(color: Colors.white70)),
     );
   }
+
+  Future<void> downloadCodigoBrdart(String codigo, String nomeArquivo) async {
+    if (kIsWeb) {
+      await downloadFileWeb(codigo, nomeArquivo);
+    } else {
+      final file = File(nomeArquivo);
+      await file.writeAsString(codigo);
+      // ignore: use_build_context_synchronously
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Arquivo salvo'),
+          content: Text('Arquivo salvo como: $nomeArquivo'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Fechar'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 }
 
 class InterpretadorBR {
@@ -475,11 +501,8 @@ class InterpretadorBR {
   Color _corBox = Colors.blueGrey.shade900;
   Color _corTexto = Colors.amber;
 
-  // Ponteiro global para adicionar mensagens ao terminal
-  void Function(String)? _adicionarMensagemGlobal;
-
   void setAdicionarMensagemGlobal(void Function(String) fn) {
-    _adicionarMensagemGlobal = fn;
+    // Não faz nada, compatibilidade
   }
 
   // Corrige escopo: garantir que interpretarLinha está definido antes de ser usado
