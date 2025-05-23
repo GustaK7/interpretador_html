@@ -469,12 +469,13 @@ class InterpretadorBR {
     final List<Widget> filhos = [];
     interpretarBlocoSintaxeNova(
       inner,
-      adicionarWidget: (w) => filhos.add(w),
-      adicionarMensagem: (msg) {
-        if (msg.trim().isNotEmpty && _adicionarMensagemGlobal != null) {
-          _adicionarMensagemGlobal!(msg);
+      adicionarWidget: (w) {
+        // Só adiciona widgets visuais reais (ignora SizedBox.shrink)
+        if (!(w is SizedBox && w.width == 0 && w.height == 0)) {
+          filhos.add(w);
         }
       },
+      adicionarMensagem: (msg) {},
     );
     Widget? child;
     if (filhos.isNotEmpty) {
