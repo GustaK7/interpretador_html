@@ -338,59 +338,116 @@ class InterpretadorBR {
   Color _corBox = Colors.blueGrey.shade900;
   Color _corTexto = Colors.amber;
 
+  // Ponteiro global para adicionar mensagens ao terminal
+  void Function(String)? _adicionarMensagemGlobal;
+
+  void setAdicionarMensagemGlobal(void Function(String) fn) {
+    _adicionarMensagemGlobal = fn;
+  }
+
+  // Corrige escopo: garantir que interpretarLinha está definido antes de ser usado
+  String interpretarLinha(String linha, {void Function(Widget)? adicionarWidget}) {
+    linha = linha.trim();
+    if (linha.startsWith('cor.box')) {
+      // Comando de mudança de cor para box
+      String novaCor = linha.substring(8).trim();
+      Color? cor = _parseCor(novaCor);
+      if (cor != null) {
+        _corBox = cor;
+        return 'Cor da box alterada para $novaCor';
+      } else {
+        return 'Cor inválida: $novaCor';
+      }
+    } else if (linha.startsWith('cor.texto')) {
+      // Comando de mudança de cor para texto
+      String novaCor = linha.substring(10).trim();
+      Color? cor = _parseCor(novaCor);
+      if (cor != null) {
+        _corTexto = cor;
+        return 'Cor do texto alterada para $novaCor';
+      } else {
+        return 'Cor inválida: $novaCor';
+      }
+    } else if (linha.startsWith('define')) {
+      // Comando de definição de variável
+      final partes = linha.split('=');
+      if (partes.length == 2) {
+        final nome = partes[0].substring(6).trim();
+        final valor = partes[1].trim();
+        // Tenta avaliar expressão matemática ao definir variável
+        dynamic valorAvaliado;
+        try {
+          valorAvaliado = _avaliarExpressao(valor);
+        } catch (e) {
+          valorAvaliado = valor;
+        }
+        variaveis[nome] = valorAvaliado.toString();
+        return 'Variável $nome definida como ${variaveis[nome]}';
+      } else {
+        return 'Erro na definição da variável. Sintaxe: define <nome> = <valor>';
+      }
+    } else if (linha.startsWith('mostre')) {
+      // Comando para mostrar valor de variável
+      final nome = linha.substring(7).trim();
+      if (variaveis.containsKey(nome)) {
+        return 'Valor de $nome: ${variaveis[nome]}';
+      } else {
+        return 'Variável $nome não definida';
+      }
+    } else if (linha.startsWith('repita')) {
+      // Comando de repetição
+      final partes = linha.split(' ');
+      if (partes.length >= 3) {
+        final vezes = partes[1];
+        final comando = partes.sublist(2).join(' ');
+        return 'Repetindo $comando por $vezes vezes';
+      } else {
+        return 'Erro na sintaxe do comando repita. Exemplo: repita <n> <comando>';
+      }
+    } else if (linha.startsWith('diga')) {
+      // Suporte a concatenação: diga "texto" variavel;
+      String conteudo = linha.substring(4).trim();
+      String resultado = '';
+      final regex = RegExp(r'"([^"]*)"|([^\s]+)');
+      final matches = regex.allMatches(conteudo);
+      for (final match in matches) {
+        if (match.group(1) != null) {
+          resultado += match.group(1)!;
+        } else if (match.group(2) != null) {
+          final varName = match.group(2)!;
+          resultado += variaveis.containsKey(varName) ? variaveis[varName]! : varName;
+        }
+      }
+      if (adicionarWidget != null) {
+        adicionarWidget(Text(resultado, style: TextStyle(fontSize: 16, color: _corTexto)));
+      }
+      return resultado;
+    } else {
+      // Comandos aritméticos e lógicos simples
+      try {
+        final resultado = _avaliarExpressao(linha);
+        return 'Resultado: $resultado';
+      } catch (e) {
+        return 'Erro ao avaliar expressão: $e';
+      }
+    }
+  }
+
   // Novo: interpreta blocos aninhados e comandos de cor
   String interpretarBloco(String bloco, {void Function(Widget)? adicionarWidget, void Function(String)? adicionarMensagem}) {
     bloco = bloco.trim();
     if (bloco.startsWith('box{')) {
       final inner = _extrairBloco(bloco.substring(3).trim());
-      final List<Widget> filhos = [];
-      final List<String> mensagensPendentes = [];
-      interpretarBlocoSintaxeNova(
-        inner,
-        adicionarWidget: (w) => filhos.add(w),
-        adicionarMensagem: (msg) {
-          if (msg.trim().isNotEmpty) mensagensPendentes.add(msg.trim());
-        },
-      );
-      for (final msg in mensagensPendentes) {
-        filhos.add(Text(msg, style: TextStyle(fontSize: 16, color: _corTexto)));
-      }
-      Widget? child;
-      if (filhos.isNotEmpty) {
-        child = filhos.length == 1 ? filhos.first : Column(crossAxisAlignment: CrossAxisAlignment.start, children: filhos);
-      }
-      final box = Container(
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _corBox,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: child,
-      );
-      adicionarWidget?.call(box);
+      final widget = _interpretarWidgetBloco(inner: inner, cor: _corBox, isBox: true);
+      adicionarWidget?.call(widget);
       return '';
     } else if (bloco.startsWith('text{') || bloco.startsWith('texto{')) {
       final inner = bloco.startsWith('text{')
           ? _extrairBloco(bloco.substring(4).trim())
           : _extrairBloco(bloco.substring(5).trim());
-      final List<Widget> filhos = [];
-      final List<String> mensagensPendentes = [];
-      interpretarBlocoSintaxeNova(
-        inner,
-        adicionarWidget: (w) => filhos.add(w),
-        adicionarMensagem: (msg) {
-          if (msg.trim().isNotEmpty) mensagensPendentes.add(msg.trim());
-        },
-      );
-      for (final msg in mensagensPendentes) {
-        filhos.add(Text(msg, style: TextStyle(fontSize: 20, color: _corTexto)));
-      }
+      final widget = _interpretarWidgetBloco(inner: inner, cor: _corTexto, isBox: false);
       if (adicionarWidget != null) {
-        if (filhos.isNotEmpty) {
-          final widget = filhos.length == 1 ? filhos.first : Column(crossAxisAlignment: CrossAxisAlignment.start, children: filhos);
-          adicionarWidget(widget);
-        }
+        adicionarWidget(widget);
       }
       return '';
     } else {
@@ -403,273 +460,79 @@ class InterpretadorBR {
     }
   }
 
-  String interpretarLinha(String linha, {void Function(Widget)? adicionarWidget}) {
-    final trimmed = linha.trim();
-    // Controle de cor: cor.box = verde, cor.texto = branco
-    if (trimmed.startsWith('cor.box')) {
-      final partes = trimmed.split('=');
-      if (partes.length == 2) {
-        final cor = _parseCor(partes[1].trim());
-        if (cor != null) {
-          _corBox = cor;
-          return 'Cor da caixa definida.';
-        } else {
-          return 'Cor de caixa desconhecida.';
+  // Refatoração: Função auxiliar para interpretar blocos de widget (box/texto)
+  Widget _interpretarWidgetBloco({
+    required String inner,
+    required Color cor,
+    required bool isBox,
+  }) {
+    final List<Widget> filhos = [];
+    interpretarBlocoSintaxeNova(
+      inner,
+      adicionarWidget: (w) => filhos.add(w),
+      adicionarMensagem: (msg) {
+        if (msg.trim().isNotEmpty && _adicionarMensagemGlobal != null) {
+          _adicionarMensagemGlobal!(msg);
         }
-      }
-    } else if (trimmed.startsWith('cor.texto')) {
-      final partes = trimmed.split('=');
-      if (partes.length == 2) {
-        final cor = _parseCor(partes[1].trim());
-        if (cor != null) {
-          _corTexto = cor;
-          return 'Cor do texto definida.';
-        } else {
-          return 'Cor de texto desconhecida.';
-        }
-      }
-    } else if (trimmed.startsWith('box{')) {
-      try {
-        final widget = _parseWidget(trimmed);
-        if (adicionarWidget != null) adicionarWidget(widget);
-        return 'Widget box renderizado!';
-      } catch (e) {
-        return 'Erro ao interpretar box: $e';
-      }
-    } else if (trimmed.startsWith('texto{')) {
-      try {
-        final widget = _parseWidget(trimmed);
-        if (adicionarWidget != null) adicionarWidget(widget);
-        return 'Widget texto renderizado!';
-      } catch (e) {
-        return 'Erro ao interpretar texto: $e';
-      }
-    } else if (trimmed.startsWith('tela{')) {
-      try {
-        final widget = _parseTela(trimmed);
-        if (adicionarWidget != null) adicionarWidget(widget);
-        return 'Widget tela renderizado!';
-      } catch (e) {
-        return 'Erro ao interpretar tela: $e';
-      }
+      },
+    );
+    Widget? child;
+    if (filhos.isNotEmpty) {
+      child = filhos.length == 1 ? filhos.first : Column(crossAxisAlignment: CrossAxisAlignment.start, children: filhos);
+    } else {
+      child = const SizedBox.shrink();
     }
-    final tokens = linha.trim().split(RegExp(r"\\s+"));
-    if (tokens.isEmpty) return "";
-    final comando = tokens[0];
-    switch (comando) {
-      case "diga":
-        return tokens.sublist(1).join(" ");
-
-      case "soma":
-        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
-        final a = double.tryParse(tokens[1].replaceAll(',', '.'));
-        final b = double.tryParse(tokens[2].replaceAll(',', '.'));
-        if (a == null || b == null) return "Erro na soma: argumentos inválidos.";
-        return "${a + b}";
-
-      case "subtrai":
-        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
-        final a = double.tryParse(tokens[1]);
-        final b = double.tryParse(tokens[2]);
-        if (a == null || b == null) return "Erro na subtração: argumentos inválidos.";
-        return "${a - b}";
-
-      case "multiplica":
-        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
-        final a = double.tryParse(tokens[1]);
-        final b = double.tryParse(tokens[2]);
-        if (a == null || b == null) return "Erro na multiplicação: argumentos inválidos.";
-        return "${a * b}";
-
-      case "divide":
-        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
-        final a = double.tryParse(tokens[1]);
-        final b = double.tryParse(tokens[2]);
-        if (a == null || b == null) return "Erro na divisão: argumentos inválidos.";
-        if (b == 0) return "Erro: divisão por zero.";
-        return "${a / b}";
-
-      case "resto":
-        if (tokens.length < 3) return "Erro: argumentos insuficientes.";
-        final a = int.tryParse(tokens[1]);
-        final b = int.tryParse(tokens[2]);
-        if (a == null || b == null) return "Erro no resto: argumentos inválidos.";
-        if (b == 0) return "Erro: divisão por zero.";
-        return "${a % b}";
-
-      case "define":
-        if (tokens.length < 4 || tokens[2] != "=") {
-          return "Erro: use 'define nome = valor'.";
-        }
-        final nome = tokens[1];
-        final valor = tokens.sublist(3).join(" ");
-        variaveis[nome] = valor;
-        return "Variável '$nome' definida com valor '$valor'.";
-
-      case "mostre":
-        final nome = tokens[1];
-        return variaveis[nome] ?? "Variável '$nome' não definida.";
-
-      case "repita":
-        if (tokens.length < 3) return "Erro: use 'repita n comando ...'";
-        final vezes = int.tryParse(tokens[1]);
-        if (vezes == null || vezes < 1) return "Erro: número de repetições inválido.";
-        final comandoRepetido = tokens.sublist(2).join(" ");
-        final resultados = <String>[];
-        for (int i = 0; i < vezes; i++) {
-          resultados.add(interpretarLinha(comandoRepetido));
-        }
-        return resultados.join("\n");
-
-      case "se":
-        if (tokens.length < 5) return "Erro: use 'se valor1 operador valor2 comando ...'";
-        final valor1 = tokens[1];
-        final operador = tokens[2];
-        final valor2 = tokens[3];
-        bool condicao = false;
-        final num1 = double.tryParse(valor1);
-        final num2 = double.tryParse(valor2);
-        if (num1 != null && num2 != null) {
-          switch (operador) {
-            case '==': condicao = num1 == num2; break;
-            case '!=': condicao = num1 != num2; break;
-            case '>': condicao = num1 > num2; break;
-            case '<': condicao = num1 < num2; break;
-            case '>=': condicao = num1 >= num2; break;
-            case '<=': condicao = num1 <= num2; break;
-            default: return "Erro: operador desconhecido '$operador'";
-          }
-        } else {
-          switch (operador) {
-            case '==': condicao = valor1 == valor2; break;
-            case '!=': condicao = valor1 != valor2; break;
-            default: return "Erro: operador '$operador' só suporta números.";
-          }
-        }
-        // Procura por 'senao' nos tokens
-        int senaoIndex = tokens.indexWhere((t) => t == 'senao', 4);
-        if (condicao) {
-          final comandoCondicional = senaoIndex == -1
-              ? tokens.sublist(4).join(" ")
-              : tokens.sublist(4, senaoIndex).join(" ");
-          return interpretarLinha(comandoCondicional);
-        } else if (senaoIndex != -1 && senaoIndex + 1 < tokens.length) {
-          final comandoSenao = tokens.sublist(senaoIndex + 1).join(" ");
-          return interpretarLinha(comandoSenao);
-        } else {
-          return "";
-        }
-
-      default:
-        // Se não reconhecido, trata como texto a ser exibido (como diga)
-        return linha.trim();
-    }
-  }
-
-  Widget _parseTela(String input) {
-    // Remove 'tela{' e '}' finais
-    final inner = _extrairBloco(input.substring(4).trim());
-    return _parseWidget(inner);
-  }
-
-  Widget _parseWidget(String input) {
-    input = input.trim();
-    if (input.startsWith('box{')) {
-      final inner = _extrairBloco(input.substring(3).trim());
-      final List<Widget> filhos = [];
-      interpretarBlocoSintaxeNova(
-        inner,
-        adicionarWidget: (w) => filhos.add(w),
-        adicionarMensagem: (msg) {
-          if (msg.trim().isNotEmpty) {
-            if (_adicionarMensagemGlobal != null) _adicionarMensagemGlobal!(msg);
-          }
-        },
-      );
-      Widget? child;
-      if (filhos.isNotEmpty) {
-        child = filhos.length == 1 ? filhos.first : Column(crossAxisAlignment: CrossAxisAlignment.start, children: filhos);
-      } else {
-        child = const SizedBox.shrink();
-      }
+    if (isBox) {
       return Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _corBox,
+          color: cor,
           borderRadius: BorderRadius.circular(8),
         ),
         child: child,
       );
-    } else if (input.startsWith('texto{')) {
-      final inner = _extrairBloco(input.substring(5).trim());
-      final List<Widget> filhos = [];
-      interpretarBlocoSintaxeNova(
-        inner,
-        adicionarWidget: (w) => filhos.add(w),
-        adicionarMensagem: (msg) {
-          if (msg.trim().isNotEmpty) {
-            if (_adicionarMensagemGlobal != null) _adicionarMensagemGlobal!(msg);
-          }
-        },
-      );
-      Widget? child;
-      if (filhos.isNotEmpty) {
-        child = filhos.length == 1 ? filhos.first : Column(crossAxisAlignment: CrossAxisAlignment.start, children: filhos);
-      } else {
-        child = const SizedBox.shrink();
-      }
+    } else {
       return child;
+    }
+  }  // Refatoração: Uso da função auxiliar no parseWidget
+  Widget _parseWidget(String input) {
+    input = input.trim();
+    if (input.startsWith('box{')) {
+      final inner = _extrairBloco(input.substring(3).trim());
+      return _interpretarWidgetBloco(inner: inner, cor: _corBox, isBox: true);
+    } else if (input.startsWith('texto{') || input.startsWith('text{')) {
+      final inner = input.startsWith('texto{') 
+          ? _extrairBloco(input.substring(5).trim())
+          : _extrairBloco(input.substring(4).trim());
+      
+      // Procura por texto entre aspas e comandos de cor
+      List<String> linhas = inner.split(';');
+      Color? corTexto;
+      String texto = '';
+      
+      for (var linha in linhas) {
+        linha = linha.trim();
+        if (linha.startsWith('cor.texto')) {
+          String novaCor = linha.substring(9).trim();
+          corTexto = _parseCor(novaCor);
+        } else if (linha.startsWith('"') && linha.endsWith('"')) {
+          texto = linha.substring(1, linha.length - 1);
+        }
+      }
+      
+      return Text(
+        texto,
+        style: TextStyle(
+          fontSize: 16,
+          color: corTexto ?? _corTexto,
+        ),
+      );
     } else {
       throw 'Bloco desconhecido: $input';
     }
   }
 
-  // Ponteiro global para adicionar mensagens ao terminal
-  void Function(String)? _adicionarMensagemGlobal;
-
-  void setAdicionarMensagemGlobal(void Function(String) fn) {
-    _adicionarMensagemGlobal = fn;
-  }
-
-  Color? _parseCor(String cor) {
-    switch (cor.toLowerCase()) {
-      case 'azul': return Colors.blue;
-      case 'verde': return Colors.green;
-      case 'vermelho': return Colors.red;
-      case 'amarelo': return Colors.yellow;
-      case 'preto': return Colors.black;
-      case 'branco': return Colors.white;
-      case 'cinza': return Colors.grey;
-      case 'laranja': return Colors.orange;
-      case 'roxo': return Colors.purple;
-      case 'rosa': return Colors.pink;
-      default: return null;
-    }
-  }
-
-  String _extrairBloco(String input) {
-    // Extrai conteúdo entre { ... }
-    int nivel = 0;
-    int start = 0;
-    int end = 0;
-    for (int i = 0; i < input.length; i++) {
-      if (input[i] == '{') {
-        if (nivel == 0) start = i + 1;
-        nivel++;
-      } else if (input[i] == '}') {
-        nivel--;
-        if (nivel == 0) {
-          end = i;
-          break;
-        }
-      }
-    }
-    if (nivel != 0) throw 'Bloco não fechado corretamente';
-    return input.substring(start, end).trim();
-  }
-
-  // Novo método para sintaxe com chaves e ponto e vírgula
   String interpretarBlocoSintaxeNova(String bloco, {void Function(Widget)? adicionarWidget, void Function(String)? adicionarMensagem}) {
     List<String> comandos = _splitComandosPorPontoEVirgula(bloco);
     String saida = '';
@@ -709,22 +572,8 @@ class InterpretadorBR {
         final resultado = interpretarLinha(comando);
         if (resultado.trim().isNotEmpty && adicionarMensagem != null) {
           adicionarMensagem(resultado);
-        }
-      } else {
-        // Não renderiza texto puro fora de diga
-        // Se quiser permitir, descomente abaixo:
-        // String conteudo = comando;
-        // if (conteudo.startsWith('"') && conteudo.endsWith('"')) {
-        //   conteudo = conteudo.substring(1, conteudo.length - 1);
-        // }
-        // if (conteudo.isNotEmpty) {
-        //   if (adicionarWidget != null) {
-        //     adicionarWidget(Text(conteudo, style: TextStyle(fontSize: 16, color: _corTexto)));
-        //   }
-        //   if (adicionarMensagem != null) {
-        //     adicionarMensagem(conteudo);
-        //   }
-        // }
+        }      } else {
+        // Ignora texto puro que não seja parte do comando 'diga'
       }
     }
     return saida.trim();
@@ -808,7 +657,6 @@ class InterpretadorBR {
       return '';
     }
   }
-
   // Avalia uma condição simples do tipo 'x == 3', 'y > 2', etc.
   bool _avaliarCondicao(String condicao) {
     condicao = condicao.trim();
@@ -819,29 +667,126 @@ class InterpretadorBR {
       if (idx != -1) {
         String esquerda = condicao.substring(0, idx).trim();
         String direita = condicao.substring(idx + op.length).trim();
-        // Tenta converter para número, senão compara como string
-        var valEsq = num.tryParse(esquerda) ?? variaveis[esquerda] ?? esquerda;
-        var valDir = num.tryParse(direita) ?? variaveis[direita] ?? direita;
-        switch (op) {
-          case '==':
-            return valEsq.toString() == valDir.toString();
-          case '!=':
-            return valEsq.toString() != valDir.toString();
-          case '>':
-            return (valEsq is num && valDir is num) ? valEsq > valDir : false;
-          case '<':
-            return (valEsq is num && valDir is num) ? valEsq < valDir : false;
-          case '>=':
-            return (valEsq is num && valDir is num) ? valEsq >= valDir : false;
-          case '<=':
-            return (valEsq is num && valDir is num) ? valEsq <= valDir : false;
+        
+        // Obtém os valores das variáveis se existirem
+        String valorEsquerda = variaveis.containsKey(esquerda) ? variaveis[esquerda]! : esquerda;
+        String valorDireita = variaveis.containsKey(direita) ? variaveis[direita]! : direita;
+
+        // Tenta converter para números se possível
+        num? numEsq = num.tryParse(valorEsquerda);
+        num? numDir = num.tryParse(valorDireita);
+        
+        // Se ambos são números, compara numericamente
+        if (numEsq != null && numDir != null) {
+          switch (op) {
+            case '==': return numEsq == numDir;
+            case '!=': return numEsq != numDir;
+            case '>': return numEsq > numDir;
+            case '<': return numEsq < numDir;
+            case '>=': return numEsq >= numDir;
+            case '<=': return numEsq <= numDir;
+          }
+        } else {
+          // Se não são números, compara como strings
+          switch (op) {
+            case '==': return valorEsquerda == valorDireita;
+            case '!=': return valorEsquerda != valorDireita;
+            case '>': return valorEsquerda.compareTo(valorDireita) > 0;
+            case '<': return valorEsquerda.compareTo(valorDireita) < 0;
+            case '>=': return valorEsquerda.compareTo(valorDireita) >= 0;
+            case '<=': return valorEsquerda.compareTo(valorDireita) <= 0;
+          }
         }
       }
     }
+    
     // Se não encontrou operador, tenta avaliar como booleano
     if (variaveis.containsKey(condicao)) {
       return variaveis[condicao] == true || variaveis[condicao] == 'verdadeiro' || variaveis[condicao] == 'true';
     }
     return condicao.toLowerCase() == 'verdadeiro' || condicao == 'true';
+  }
+
+  // Implementação dos comandos matemáticos e avaliação de expressões simples
+  dynamic _avaliarExpressao(String linha) {
+    final partes = linha.trim().split(RegExp(r'\s+'));
+    if (partes.isEmpty) throw 'Expressão vazia';
+    String comando = partes[0].toLowerCase();
+    num? valorA, valorB;
+    // Função auxiliar para obter valor numérico ou variável
+    num _parseValor(String s) {
+      if (variaveis.containsKey(s)) {
+        return num.tryParse(variaveis[s]!) ?? (throw 'Variável $s não é numérica');
+      }
+      return num.tryParse(s) ?? (throw 'Valor inválido: $s');
+    }
+    switch (comando) {
+      case 'soma':
+        if (partes.length < 3) throw 'Uso: soma <a> <b>';
+        valorA = _parseValor(partes[1]);
+        valorB = _parseValor(partes[2]);
+        return valorA + valorB;
+      case 'subtrai':
+        if (partes.length < 3) throw 'Uso: subtrai <a> <b>';
+        valorA = _parseValor(partes[1]);
+        valorB = _parseValor(partes[2]);
+        return valorA - valorB;
+      case 'multiplica':
+        if (partes.length < 3) throw 'Uso: multiplica <a> <b>';
+        valorA = _parseValor(partes[1]);
+        valorB = _parseValor(partes[2]);
+        return valorA * valorB;
+      case 'divide':
+        if (partes.length < 3) throw 'Uso: divide <a> <b>';
+        valorA = _parseValor(partes[1]);
+        valorB = _parseValor(partes[2]);
+        if (valorB == 0) throw 'Divisão por zero';
+        return valorA / valorB;
+      case 'resto':
+        if (partes.length < 3) throw 'Uso: resto <a> <b>';
+        valorA = _parseValor(partes[1]);
+        valorB = _parseValor(partes[2]);
+        if (valorB == 0) throw 'Divisão por zero';
+        return valorA % valorB;
+      default:
+        throw 'Comando ou expressão desconhecida: $linha';
+    }
+  }
+
+  Color? _parseCor(String cor) {
+    switch (cor.toLowerCase()) {
+      case 'azul': return Colors.blue;
+      case 'verde': return Colors.green;
+      case 'vermelho': return Colors.red;
+      case 'amarelo': return Colors.yellow;
+      case 'preto': return Colors.black;
+      case 'branco': return Colors.white;
+      case 'cinza': return Colors.grey;
+      case 'laranja': return Colors.orange;
+      case 'roxo': return Colors.purple;
+      case 'rosa': return Colors.pink;
+      default: return null;
+    }
+  }
+
+  String _extrairBloco(String input) {
+    // Extrai conteúdo entre { ... }
+    int nivel = 0;
+    int start = 0;
+    int end = 0;
+    for (int i = 0; i < input.length; i++) {
+      if (input[i] == '{') {
+        if (nivel == 0) start = i + 1;
+        nivel++;
+      } else if (input[i] == '}') {
+        nivel--;
+        if (nivel == 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (nivel != 0) throw 'Bloco não fechado corretamente';
+    return input.substring(start, end).trim();
   }
 }
