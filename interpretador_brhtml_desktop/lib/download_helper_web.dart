@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
 
@@ -19,4 +20,39 @@ Future<void> downloadFileWeb(String conteudo, String nomeArquivo) async {
     ..setAttribute('download', nomeArquivo)
     ..click();
   html.Url.revokeObjectUrl(url);
+}
+
+Future<String?> importarArquivoBrhtmlWeb() async {
+  final uploadInput = html.FileUploadInputElement();
+  uploadInput.accept = '.brhtml';
+  uploadInput.click();
+  await uploadInput.onChange.first;
+  final file = uploadInput.files?.first;
+  if (file != null) {
+    final reader = html.FileReader();
+    reader.readAsText(file);
+    await reader.onLoad.first;
+    return reader.result as String?;
+  }
+  return null;
+}
+
+Future<String?> importarArquivoBrdartWeb() async {
+  final input = html.FileUploadInputElement();
+  input.accept = '.brdart';
+  input.click();
+  final completer = Completer<String?>();
+  input.onChange.listen((event) {
+    final file = input.files?.first;
+    if (file == null) {
+      completer.complete(null);
+      return;
+    }
+    final reader = html.FileReader();
+    reader.onLoadEnd.listen((event) {
+      completer.complete(reader.result as String?);
+    });
+    reader.readAsText(file);
+  });
+  return completer.future;
 }

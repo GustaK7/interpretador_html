@@ -6,6 +6,7 @@ import 'download_helper.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'download_helper_web.dart' if (dart.library.io) 'dart:io';
+import 'package:file_picker/file_picker.dart';
 
 void main() {
   runApp(const InterpretadorApp());
@@ -93,6 +94,19 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
     _interpretador.setAdicionarMensagemGlobal(_adicionarMensagem);
   }
 
+  Future<String?> importarArquivoBrdart() async {
+    if (kIsWeb) {
+      return await importarArquivoBrdartWeb();
+    } else {
+      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['brdart']);
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        return await file.readAsString();
+      }
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,6 +172,24 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.black,
+                    elevation: 0,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final conteudo = await importarArquivoBrdart();
+                    if (conteudo != null) {
+                      setState(() {
+                        _controller.text = conteudo;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Importar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
                     elevation: 0,
                   ),
                 ),
