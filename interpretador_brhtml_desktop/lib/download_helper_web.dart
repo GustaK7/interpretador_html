@@ -16,9 +16,9 @@ Future<void> downloadFileWeb(String conteudo, String nomeArquivo) async {
   final bytes = utf8.encode(conteudo);
   final blob = html.Blob([bytes], 'text/plain');
   final url = html.Url.createObjectUrlFromBlob(blob);
-  final anchor = html.AnchorElement(href: url)
-    ..setAttribute('download', nomeArquivo)
-    ..click();
+ //final anchor = html.AnchorElement(href: url)
+  //  ..setAttribute('download', nomeArquivo)
+  //  ..click();
   html.Url.revokeObjectUrl(url);
 }
 
