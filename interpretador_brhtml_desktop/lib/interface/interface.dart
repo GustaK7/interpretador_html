@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -10,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import '../logica/interpretador.dart';
 import '../download_helper.dart';
 import '../download_helper_web.dart';
+import '../interface/syntax_highlighting_editor.dart'; // Importando o componente separado
 
 class InterpretadorHome extends StatefulWidget {
   const InterpretadorHome({super.key});
@@ -17,7 +17,6 @@ class InterpretadorHome extends StatefulWidget {
   @override
   State<InterpretadorHome> createState() => _InterpretadorHomeState();
 }
-
 
 class _InterpretadorHomeState extends State<InterpretadorHome> {
   final TextEditingController _controller = TextEditingController();
@@ -219,23 +218,18 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Editor', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('Editor', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                     const SizedBox(height: 8),
-                    TextField(
-                      controller: _controller,
-                      maxLines: null,
-                      minLines: 5,
-                      style: const TextStyle(fontFamily: 'Fira Mono'),
-                      decoration: const InputDecoration(
-                        hintText: 'Digite seus comandos BRDart aqui...}',
-                        border: OutlineInputBorder(),
-                        filled: true,
-                        fillColor: Color(0xFF252526),
-                        contentPadding: EdgeInsets.all(12),
+                    // Usando o SyntaxHighlightingEditor importado
+                    Expanded(
+                      child: SyntaxHighlightingEditor(
+                        controller: _controller,
+                        hintText: 'Digite seus comandos BRDart aqui...',
+                        maxLines: null,
+                        minLines: 10,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Expanded(child: SizedBox()),
                   ],
                 ),
               ),
