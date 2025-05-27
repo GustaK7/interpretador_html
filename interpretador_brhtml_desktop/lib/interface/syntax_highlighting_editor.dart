@@ -23,8 +23,6 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
   final ScrollController _scrollController = ScrollController();
   
   // Cores do tema (baseado no VS Code Dark Theme)
-  static const Color _backgroundColor = Color(0xFF1E1E1E);
-  static const Color _textColor = Color(0xFFD4D4D4);
   static const Color _keywordColor = Color(0xFF569CD6);
   static const Color _stringColor = Color(0xFFCE9178);
   static const Color _numberColor = Color(0xFFB5CEA8);
@@ -75,7 +73,7 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
       tokenRegex,
       onMatch: (Match match) {
         String matchedText = match.group(0)!;
-        Color color = _textColor;
+        Color color = _keywordColor;
         FontWeight fontWeight = FontWeight.normal;
 
         if (match.group(1) != null) {
@@ -128,7 +126,7 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
           spans.add(TextSpan(
             text: nonMatch,
             style: const TextStyle(
-              color: _textColor,
+              color: Color(0xFFD4D4D4),
               fontFamily: 'Fira Code',
               fontSize: 14,
             ),
@@ -144,11 +142,16 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
   @override
   Widget build(BuildContext context) {
     final lineCount = widget.controller.text.split('\n').length;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF7F7FA);
+    final gutterColor = isDark ? const Color(0xFF232323) : const Color(0xFFE9E9F0);
+    final gutterTextColor = isDark ? const Color(0xFF858585) : const Color(0xFF8A8A99);
+    final borderColor = Theme.of(context).dividerColor;
     return Container(
       decoration: BoxDecoration(
-        color: _backgroundColor,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF3C3C3C)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,7 +159,13 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
           // Gutter de números de linha
           Container(
             width: 40,
-            color: const Color(0xFF252526),
+            decoration: BoxDecoration(
+              color: gutterColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                bottomLeft: Radius.circular(8),
+              ),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -167,8 +176,8 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
                   alignment: Alignment.centerRight,
                   child: Text(
                     '${index + 1}',
-                    style: const TextStyle(
-                      color: Color(0xFF858585),
+                    style: TextStyle(
+                      color: gutterTextColor,
                       fontFamily: 'Fira Code',
                       fontSize: 12,
                     ),
@@ -186,8 +195,8 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
                   focusNode: _focusNode,
                   maxLines: widget.maxLines,
                   minLines: widget.minLines,
-                  style: const TextStyle(
-                    color: Colors.transparent,
+                  style: TextStyle(
+                    color: isDark ? Colors.transparent : Colors.transparent,
                     fontFamily: 'Fira Code',
                     fontSize: 14,
                   ),
@@ -195,7 +204,7 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.all(16),
                   ),
-                  cursorColor: Colors.white,
+                  cursorColor: isDark ? Colors.white : Colors.black87,
                   scrollController: _scrollController,
                 ),
                 Positioned.fill(
@@ -207,8 +216,8 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
                         child: widget.controller.text.isEmpty
                             ? Text(
                                 widget.hintText,
-                                style: const TextStyle(
-                                  color: Color(0xFF6A6A6A),
+                                style: TextStyle(
+                                  color: isDark ? const Color(0xFF6A6A6A) : Colors.grey,
                                   fontFamily: 'Fira Code',
                                   fontSize: 14,
                                 ),

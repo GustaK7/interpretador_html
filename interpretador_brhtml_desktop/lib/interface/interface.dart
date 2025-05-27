@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 
 import '../logica/interpretador.dart';
 import '../download_helper.dart';
@@ -10,7 +11,9 @@ import '../download_helper_web.dart' if (dart.library.io) '../download_helper_io
 import '../interface/syntax_highlighting_editor.dart'; // Importando o componente separado
 
 class InterpretadorHome extends StatefulWidget {
-  const InterpretadorHome({super.key});
+  final bool isDark;
+  final VoidCallback onToggleTheme;
+  const InterpretadorHome({super.key, required this.isDark, required this.onToggleTheme});
 
   @override
   State<InterpretadorHome> createState() => _InterpretadorHomeState();
@@ -98,108 +101,129 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
         child: AppBar(
           title: const Text('Interpretador BRDart'),
           actions: [
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _executarComando,
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Executar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    // Pergunta o nome do arquivo ao usuário
-                    String? nome = await showDialog<String>(
-                      context: context,
-                      builder: (ctx) {
-                        final controller = TextEditingController(text: 'meu_projeto.brdart');
-                        return AlertDialog(
-                          title: const Text('Salvar código como'),
-                          content: TextField(
-                            controller: controller,
-                            decoration: const InputDecoration(
-                              labelText: 'Nome do arquivo',
-                              hintText: 'ex: meu_projeto.brdart',
-                            ),
-                            autofocus: true,
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop(),
-                              child: const Text('Cancelar'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                String nome = controller.text.trim();
-                                if (!nome.endsWith('.brdart')) nome += '.brdart';
-                                Navigator.of(ctx).pop(nome);
-                              },
-                              child: const Text('Salvar'),
-                            ),
-                          ],
-                        );
-                      },
+            _CustomMenuBar(
+              onImport: () async {
+                final conteudo = await importarArquivoBrdart();
+                if (conteudo != null) {
+                  setState(() {
+                    _controller.text = conteudo;
+                  });
+                }
+              },
+              onExport: () async {
+                String? nome = await showDialog<String>(
+                  context: context,
+                  builder: (ctx) {
+                    final controller = TextEditingController(text: 'meu_projeto.brdart');
+                    return AlertDialog(
+                      title: const Text('Salvar código como'),
+                      content: TextField(
+                        controller: controller,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome do arquivo',
+                          hintText: 'ex: meu_projeto.brdart',
+                        ),
+                        autofocus: true,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Cancelar'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            String nome = controller.text.trim();
+                            if (!nome.endsWith('.brdart')) nome += '.brdart';
+                            Navigator.of(ctx).pop(nome);
+                          },
+                          child: const Text('Salvar'),
+                        ),
+                      ],
                     );
-                    if (nome != null && nome.isNotEmpty) {
-                      final codigo = _controller.text;
-                      await downloadCodigoBrdart(codigo, nome);
-                    }
                   },
-                  icon: const Icon(Icons.download),
-                  label: const Text('Download'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final conteudo = await importarArquivoBrdart();
-                    if (conteudo != null) {
-                      setState(() {
-                        _controller.text = conteudo;
-                      });
-                    }
+                );
+                if (nome != null && nome.isNotEmpty) {
+                  final codigo = _controller.text;
+                  await downloadCodigoBrdart(codigo, nome);
+                }
+              },
+              onCopy: () {
+                final selection = _controller.selection;
+                if (!selection.isCollapsed) {
+                  final selectedText = _controller.text.substring(selection.start, selection.end);
+                  Clipboard.setData(ClipboardData(text: selectedText));
+                }
+              },
+              onPaste: () async {
+                final data = await Clipboard.getData('text/plain');
+                if (data?.text != null) {
+                  final selection = _controller.selection;
+                  final newText = _controller.text.replaceRange(selection.start, selection.end, data!.text!);
+                  _controller.value = _controller.value.copyWith(
+                    text: newText,
+                    selection: TextSelection.collapsed(offset: selection.start + data.text!.length),
+                  );
+                }
+              },
+              onCut: () {
+                final selection = _controller.selection;
+                if (!selection.isCollapsed) {
+                  final selectedText = _controller.text.substring(selection.start, selection.end);
+                  Clipboard.setData(ClipboardData(text: selectedText));
+                  final newText = _controller.text.replaceRange(selection.start, selection.end, '');
+                  _controller.value = _controller.value.copyWith(
+                    text: newText,
+                    selection: TextSelection.collapsed(offset: selection.start),
+                  );
+                }
+              },
+              onSelectAll: () {
+                _controller.selection = TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
+              },
+              onSearch: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) {
+                    final searchController = TextEditingController();
+                    return AlertDialog(
+                      title: const Text('Pesquisar no código'),
+                      content: TextField(
+                        controller: searchController,
+                        decoration: const InputDecoration(hintText: 'Digite a palavra para pesquisar'),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            final query = searchController.text;
+                            if (query.isNotEmpty) {
+                              final text = _controller.text;
+                              final index = text.indexOf(query);
+                              if (index != -1) {
+                                _controller.selection = TextSelection(baseOffset: index, extentOffset: index + query.length);
+                              }
+                            }
+                            Navigator.of(ctx).pop();
+                          },
+                          child: const Text('Pesquisar'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Cancelar'),
+                        ),
+                      ],
+                    );
                   },
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Importar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _limparSaida,
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Limpar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _alternarAjuda,
-                  icon: const Icon(Icons.help_outline),
-                  label: const Text('Ajuda'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueGrey,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                  ),
-                ),
-                const SizedBox(width: 16),
-              ],
+                );
+              },
+              onToggleTheme: widget.onToggleTheme,
+              isDark: widget.isDark,
+              onShowHelp: _alternarAjuda,
+            ),
+            const SizedBox(width: 16),
+            IconButton(
+              icon: const Icon(Icons.play_arrow, size: 32, color: Colors.green),
+              tooltip: 'Executar código',
+              onPressed: _executarComando,
             ),
           ],
         ),
@@ -210,21 +234,30 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
           Expanded(
             flex: _ajudaAberta ? 2 : 1,
             child: Container(
-              color: const Color(0xFF1E1E1E),
+              color: Theme.of(context).scaffoldBackgroundColor,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Editor', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    Text('Editor', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color)),
                     const SizedBox(height: 8),
-                    // Usando o SyntaxHighlightingEditor importado
                     Expanded(
-                      child: SyntaxHighlightingEditor(
-                        controller: _controller,
-                        hintText: 'Digite seus comandos BRDart aqui...',
-                        maxLines: null,
-                        minLines: 10,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1E1E) : const Color(0xFFF7F7FA),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Theme.of(context).dividerColor),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 0),
+                          child: SyntaxHighlightingEditor(
+                            controller: _controller,
+                            hintText: 'Digite seus comandos BRDart aqui...',
+                            maxLines: null,
+                            minLines: 10,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -237,22 +270,20 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
           Expanded(
             flex: 2,
             child: Container(
-              color: const Color(0xFF1E1E1E),
+              color: Theme.of(context).canvasColor,
               child: Column(
                 children: [
                   Expanded(
                     child: Stack(
                       children: [
-                        // Saída de texto (não usada, mas mantida para compatibilidade)
                         ListView.builder(
                           padding: const EdgeInsets.all(12),
                           itemCount: _saida.length,
                           itemBuilder: (context, index) => Text(
                             _saida[index],
-                            style: const TextStyle(fontFamily: 'Fira Mono', fontSize: 15),
+                            style: TextStyle(fontFamily: 'Fira Mono', fontSize: 15, color: Theme.of(context).textTheme.bodyMedium?.color),
                           ),
                         ),
-                        // Widgets dinâmicos centralizados
                         if (_widgetsDinamicos.isNotEmpty)
                           Center(
                             child: Column(
@@ -262,32 +293,31 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
                               ],
                             ),
                           ),
-                        // Menu lateral de ajuda à direita
                         if (_ajudaAberta)
                           Align(
                             alignment: Alignment.centerRight,
                             child: Container(
                               width: 350,
-                              color: const Color(0xFF23272E),
+                              color: Theme.of(context).dialogBackgroundColor,
                               child: Padding(
                                 padding: const EdgeInsets.all(0),
                                 child: Column(
                                   children: [
                                     Container(
-                                      color: const Color(0xFF181C20),
+                                      color: Theme.of(context).appBarTheme.backgroundColor,
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          const Text('Ajuda BRDart', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white)),
+                                          Text('Ajuda BRDart', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Theme.of(context).appBarTheme.foregroundColor)),
                                           IconButton(
-                                            icon: const Icon(Icons.close, color: Colors.white70),
+                                            icon: Icon(Icons.close, color: Theme.of(context).iconTheme.color),
                                             onPressed: _alternarAjuda,
                                           ),
                                         ],
                                       ),
                                     ),
-                                    const Divider(height: 1, color: Colors.white12),
+                                    Divider(height: 1, color: Theme.of(context).dividerColor),
                                     Expanded(
                                       child: SingleChildScrollView(
                                         padding: const EdgeInsets.all(16),
@@ -308,17 +338,31 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
           ),
         ],
       ),
-      // Terminal de mensagens estilo VS Code (agora ocupa toda a largura)
       bottomNavigationBar: Container(
         width: double.infinity,
-        color: const Color(0xFF181818),
+        color: Theme.of(context).canvasColor,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Terminal', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
-            ..._mensagens.map((msg) => Text(msg, style: const TextStyle(fontFamily: 'Fira Mono', color: Colors.greenAccent, fontSize: 14))),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Terminal', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color)),
+                  ..._mensagens.map((msg) => Text(msg, style: TextStyle(fontFamily: 'Fira Mono', color: Theme.of(context).brightness == Brightness.dark ? Colors.greenAccent : Colors.green[800], fontSize: 14))),
+                ],
+              ),
+            ),
+            Tooltip(
+              message: 'Limpar terminal',
+              child: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                tooltip: 'Limpar terminal',
+                onPressed: _limparSaida,
+              ),
+            ),
           ],
         ),
       ),
@@ -503,5 +547,194 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
         ),
       );
     }
+  }
+}
+
+class _CustomMenuBar extends StatelessWidget {
+  final VoidCallback onImport;
+  final VoidCallback onExport;
+  final VoidCallback onCopy;
+  final VoidCallback onPaste;
+  final VoidCallback onCut;
+  final VoidCallback onSelectAll;
+  final VoidCallback onSearch;
+  final VoidCallback onToggleTheme;
+  final bool isDark;
+  final VoidCallback onShowHelp;
+
+  const _CustomMenuBar({
+    required this.onImport,
+    required this.onExport,
+    required this.onCopy,
+    required this.onPaste,
+    required this.onCut,
+    required this.onSelectAll,
+    required this.onSearch,
+    required this.onToggleTheme,
+    required this.isDark,
+    required this.onShowHelp,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _MenuTab(
+          title: 'Arquivo',
+          items: [
+            _MenuItem('Importar', onImport),
+            _MenuItem('Exportar', onExport),
+          ],
+        ),
+        _MenuTab(
+          title: 'Editar',
+          items: [
+            _MenuItem('Copiar', onCopy),
+            _MenuItem('Colar', onPaste),
+            _MenuItem('Cortar', onCut),
+          ],
+        ),
+        _MenuTab(
+          title: 'Seleção',
+          items: [
+            _MenuItem('Selecionar tudo', onSelectAll),
+            _MenuItem('Pesquisar', onSearch),
+          ],
+        ),
+        _MenuTab(
+          title: 'Exibir',
+          items: [
+            _MenuItem(isDark ? 'Modo claro' : 'Modo escuro', onToggleTheme),
+          ],
+        ),
+        _MenuTab(
+          title: 'Ajuda',
+          items: [
+            _MenuItem('Ajuda', onShowHelp),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MenuTab extends StatefulWidget {
+  final String title;
+  final List<_MenuItem> items;
+  const _MenuTab({required this.title, required this.items});
+
+  @override
+  State<_MenuTab> createState() => _MenuTabState();
+}
+
+class _MenuTabState extends State<_MenuTab> {
+  OverlayEntry? _overlayEntry;
+  bool _expanded = false;
+
+  void _showMenu() {
+    if (_expanded) return;
+    _expanded = true;
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: offset.dx,
+        top: offset.dy + renderBox.size.height,
+        child: MouseRegion(
+          onExit: (_) => _hideMenu(),
+          child: Material(
+            elevation: 4,
+            color: Theme.of(context).canvasColor,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: widget.items.map((item) => InkWell(
+                onTap: () {
+                  item.onTap();
+                  _hideMenu();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Text(item.label),
+                ),
+              )).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context, rootOverlay: true).insert(_overlayEntry!);
+    setState(() {});
+  }
+
+  void _hideMenu() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _expanded = false;
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _hideMenu();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _expanded ? _hideMenu() : _showMenu(),
+      child: Tooltip(
+        message: widget.title,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(width: 2),
+              Icon(Icons.arrow_drop_down, size: 20, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuItem {
+  final String label;
+  final VoidCallback onTap;
+
+  _MenuItem(this.label, this.onTap);
+}
+
+class _CustomMenuButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  const _CustomMenuButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white),
+      label: Text(
+        label,
+        style: const TextStyle(color: Colors.white),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        backgroundColor: Colors.black45,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
   }
 }
