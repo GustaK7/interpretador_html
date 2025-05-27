@@ -1,14 +1,12 @@
 import 'dart:io';
-import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../logica/interpretador.dart';
 import '../download_helper.dart';
-import '../download_helper_web.dart';
+import '../download_helper_web.dart' if (dart.library.io) '../download_helper_io.dart' show importarArquivoBrdartWeb, downloadFileWeb;
 import '../interface/syntax_highlighting_editor.dart'; // Importando o componente separado
 
 class InterpretadorHome extends StatefulWidget {
@@ -481,7 +479,7 @@ class _InterpretadorHomeState extends State<InterpretadorHome> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
       title: Text(comando, style: const TextStyle(color: Colors.amber, fontFamily: 'Fira Mono', fontWeight: FontWeight.bold)),
       subtitle: Text(descricao, style: const TextStyle(color: Colors.white70)),
-    );
+    ); // Corrigido: fecha com parêntese e ponto e vírgula
   }
 
   Future<void> downloadCodigoBrdart(String codigo, String nomeArquivo) async {

@@ -34,28 +34,6 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
   static const Color _variableColor = Color(0xFF9CDCFE);
   static const Color _braceColor = Color(0xFFDA70D6);
 
-  // Palavras-chave do BRDart
-  static const Set<String> _keywords = {
-    'define', 'mostre', 'diga', 'repita', 'Se', 'se', 'senao',
-    'box', 'texto', 'text', 'cor.box', 'cor.texto'
-  };
-
-  // Funções matemáticas
-  static const Set<String> _functions = {
-    'soma', 'subtrai', 'multiplica', 'divide', 'resto'
-  };
-
-  // Cores disponíveis
-  static const Set<String> _colors = {
-    'azul', 'verde', 'vermelho', 'amarelo', 'preto', 'branco',
-    'cinza', 'laranja', 'roxo', 'rosa'
-  };
-
-  // Operadores
-  static const Set<String> _operators = {
-    '==', '!=', '>=', '<=', '>', '<', '=', '+', '-', '*', '/', '%'
-  };
-
   @override
   void initState() {
     super.initState();
@@ -80,18 +58,16 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
     if (text.isEmpty) return [];
 
     List<TextSpan> spans = [];
-    int currentIndex = 0;
-
     // Regex para capturar diferentes tipos de tokens
     final RegExp tokenRegex = RegExp(
       r'("(?:[^"\\]|\\.)*")|'  // Strings entre aspas
       r'(\b\d+\.?\d*\b)|'      // Números
-      r'(//.*)|'               // Comentários
+      r'(//.*)|'                   // Comentários
       r'(\b(?:define|mostre|diga|repita|Se|se|senao|box|texto|text|cor\.box|cor\.texto)\b)|' // Keywords
       r'(\b(?:soma|subtrai|multiplica|divide|resto)\b)|' // Functions
       r'(\b(?:azul|verde|vermelho|amarelo|preto|branco|cinza|laranja|roxo|rosa)\b)|' // Colors
-      r'([{}();])|'            // Delimitadores especiais
-      r'(==|!=|>=|<=|>|<|=)|'  // Operadores
+      r'([{}();])|'                // Delimitadores especiais
+      r'(==|!=|>=|<=|>|<|=)|'      // Operadores
       r'(\b[a-zA-Z_][a-zA-Z0-9_]*\b)' // Variáveis/identificadores
     );
 
@@ -167,89 +143,88 @@ class _SyntaxHighlightingEditorState extends State<SyntaxHighlightingEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final lineCount = widget.controller.text.split('\n').length;
     return Container(
       decoration: BoxDecoration(
         color: _backgroundColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFF3C3C3C)),
       ),
-      child: Stack(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Campo de texto invisível para capturar input
-          TextField(
-            controller: widget.controller,
-            focusNode: _focusNode,
-            maxLines: widget.maxLines,
-            minLines: widget.minLines,
-            style: const TextStyle(
-              color: Colors.transparent,
-              fontFamily: 'Fira Code',
-              fontSize: 14,
-            ),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-            ),
-            cursorColor: Colors.white,
-            scrollController: _scrollController,
-          ),
-          // Texto com syntax highlighting
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  child: widget.controller.text.isEmpty
-                      ? Text(
-                          widget.hintText,
-                          style: const TextStyle(
-                            color: Color(0xFF6A6A6A),
-                            fontFamily: 'Fira Code',
-                            fontSize: 14,
-                          ),
-                        )
-                      : RichText(
-                          text: TextSpan(
-                            children: _highlightText(widget.controller.text),
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          ),
-          // Números de linha (opcional)
-          if (widget.controller.text.isNotEmpty)
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: IgnorePointer(
-                child: Container(
-                  width: 40,
-                  color: const Color(0xFF252526),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: List.generate(
-                      widget.controller.text.split('\n').length,
-                      (index) => Container(
-                        height: 20,
-                        alignment: Alignment.center,
-                        child: Text(
-                          '${index + 1}',
-                          style: const TextStyle(
-                            color: Color(0xFF858585),
-                            fontFamily: 'Fira Code',
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
+          // Gutter de números de linha
+          Container(
+            width: 40,
+            color: const Color(0xFF252526),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(
+                lineCount,
+                (index) => Container(
+                  height: 20,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${index + 1}',
+                    style: const TextStyle(
+                      color: Color(0xFF858585),
+                      fontFamily: 'Fira Code',
+                      fontSize: 12,
                     ),
                   ),
                 ),
               ),
             ),
+          ),
+          // Editor de texto com syntax highlight
+          Expanded(
+            child: Stack(
+              children: [
+                TextField(
+                  controller: widget.controller,
+                  focusNode: _focusNode,
+                  maxLines: widget.maxLines,
+                  minLines: widget.minLines,
+                  style: const TextStyle(
+                    color: Colors.transparent,
+                    fontFamily: 'Fira Code',
+                    fontSize: 14,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(16),
+                  ),
+                  cursorColor: Colors.white,
+                  scrollController: _scrollController,
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        child: widget.controller.text.isEmpty
+                            ? Text(
+                                widget.hintText,
+                                style: const TextStyle(
+                                  color: Color(0xFF6A6A6A),
+                                  fontFamily: 'Fira Code',
+                                  fontSize: 14,
+                                ),
+                              )
+                            : RichText(
+                                text: TextSpan(
+                                  children: _highlightText(widget.controller.text),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
